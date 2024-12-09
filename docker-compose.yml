@@ -30,7 +30,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_DB: userdb
-      POSTGRES_USER: default
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5432:5432"
@@ -45,16 +45,27 @@ services:
       - app-network
     depends_on:
       - eureka-server
+      - hub-redis
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://hub-db:5433/hubdb
+      REDIS_HOST: hub-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: systempass
   hub-db:
     image: postgres:13
     environment:
       POSTGRES_DB: hubdb
-      POSTGRES_USER: default
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5433:5433"
+    networks:
+      - app-network
+  hub-redis:
+    image: redis:latest
+    command: redis-server --requirepass systempass
+    ports:
+      - "6379:6379"
     networks:
       - app-network
 
@@ -72,7 +83,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_DB: companydb
-      POSTGRES_USER: default
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5434:5434"
@@ -93,7 +104,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_DB: orderdb
-      POSTGRES_USER: default
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5435:5435"
@@ -114,7 +125,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_DB: productdb
-      POSTGRES_USER: default
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5436:5436"
@@ -129,16 +140,27 @@ services:
       - app-network
     depends_on:
       - eureka-server
+      - delivery-redis
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://delivery-db:5437/deliverydb
+      REDIS_HOST: delivery-redis
+      REDIS_PORT: 6380
+      REDIS_PASSWORD: systempass
   delivery-db:
     image: postgres:13
     environment:
       POSTGRES_DB: deliverydb
-      POSTGRES_USER: default
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5437:5437"
+    networks:
+      - app-network
+  delivery-redis:
+    image: redis:latest
+    command: redis-server --requirepass systempass
+    ports:
+      - "6380:6380"
     networks:
       - app-network
 
@@ -156,7 +178,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_DB: slackdb
-      POSTGRES_USER: default
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5438:5438"
