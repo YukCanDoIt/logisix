@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/users/**
+          filters:
+            - StripPrefix=1
+        - id: hub-service
+          uri: lb://hub-service
+          predicates:
+            - Path=/hubs/**
+          filters:
+            - StripPrefix=1
+        - id: company-service
+          uri: lb://company-service
+          predicates:
+            - Path=/companies/**
+          filters:
+            - StripPrefix=1
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/orders/**
+          filters:
+            - StripPrefix=1
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/products/**
+          filters:
+            - StripPrefix=1
+        - id: delivery-service
+          uri: lb://delivery-service
+          predicates:
+            - Path=/deliveries/**
+          filters:
+            - StripPrefix=1
+        - id: slack-service
+          uri: lb://slack-service
+          predicates:
+            - Path=/slack/**
+          filters:
+            - StripPrefix=1
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:19090/eureka/
+    registerWithEureka: false
+    fetchRegistry: true
+
+server:
+  port: 19091
+
+management:
+  zipkin:
+    tracing:
+      endpoint: "http://localhost:9411/api/v2/spans"
+  tracing:
+    sampling:
+      probability: 1.0
