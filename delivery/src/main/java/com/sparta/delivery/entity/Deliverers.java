@@ -1,5 +1,6 @@
 package com.sparta.delivery.entity;
 
+import com.sparta.delivery.global.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Getter
-public class Deliverers {
+public class Deliverers extends BaseEntity {
 
     @Id
     private Long delivererId;

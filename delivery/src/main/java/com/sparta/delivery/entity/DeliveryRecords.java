@@ -1,5 +1,6 @@
 package com.sparta.delivery.entity;
 
+import com.sparta.delivery.global.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,7 +9,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 @Entity(name = "p_delivery_records")
-public class DeliveryRecords {
+public class DeliveryRecords extends BaseEntity {
 
     @Id
     @GeneratedValue(generator = "UUID")
