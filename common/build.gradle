@@ -24,6 +24,12 @@ repositories {
 	mavenCentral()
 }
 
+jar {
+	archiveBaseName.set('common')
+	archiveVersion.set('0.0.1-SNAPSHOT')
+	archiveClassifier.set('')
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'javax.persistence:javax.persistence-api:2.2'
