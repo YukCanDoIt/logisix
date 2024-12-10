@@ -7,7 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import jakarta.persistence.*;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @EntityListeners(AuditingEntityListener.class)
 @Getter
@@ -29,31 +29,31 @@ public abstract class BaseEntity {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Timestamp createdAt;
+    private LocalDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
-    private Timestamp updatedAt;
+    private LocalDateTime updatedAt;
 
     @Column(name = "deleted_at")
-    private Timestamp deletedAt;
+    private LocalDateTime deletedAt;
 
     // 생성
     public void createBase(String username) {
-        this.createdAt = new Timestamp(System.currentTimeMillis());
+        this.createdAt = LocalDateTime.now();
         this.createdBy = username;
     }
 
     // 수정
     public void updateBase(String username) {
-        this.updatedAt = new Timestamp(System.currentTimeMillis());
+        this.updatedAt =  LocalDateTime.now();
         this.updatedBy = username;
     }
 
     // 삭제
     public void deleteBase(String username) {
         this.isDeleted = true;
-        this.deletedAt = new Timestamp(System.currentTimeMillis());
+        this.deletedAt =  LocalDateTime.now();
         this.deletedBy = username;
     }
 }
