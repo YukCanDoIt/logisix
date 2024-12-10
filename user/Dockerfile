@@ -8,7 +8,7 @@ COPY gradle /app/gradle
 COPY build.gradle settings.gradle /app/
 
 # mavenLocal에 퍼블리싱된 common 라이브러리를 레포지토리로 추가
-RUN echo "repositories { mavenLocal() }" >> build.gradle
+# RUN echo "repositories { mavenLocal() }" >> build.gradle
 
 # 실행 권한 부여
 RUN chmod +x /app/gradlew
