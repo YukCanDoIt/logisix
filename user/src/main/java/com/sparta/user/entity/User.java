@@ -9,7 +9,7 @@ import jakarta.persistence.*;
 @ToString
 @Entity
 @Table(
-        name="p_user",
+        name="p_users",
         uniqueConstraints = {
                 @UniqueConstraint(name="UK_USER", columnNames={"username"})
         }
