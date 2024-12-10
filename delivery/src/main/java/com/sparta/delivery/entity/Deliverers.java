@@ -22,7 +22,6 @@ public class Deliverers extends BaseEntity {
     @Id
     private Long delivererId;
 
-    @NotNull
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private DelivererStatusEnum status = DelivererStatusEnum.WAIT;
@@ -30,7 +29,6 @@ public class Deliverers extends BaseEntity {
     @NotNull
     private UUID hubId;
 
-    @NotNull
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private DelivererTypeEnum type;

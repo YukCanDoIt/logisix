@@ -1,15 +1,15 @@
 # Gradle 빌드 단계
-FROM gradle:7.6-jdk17 AS build
+FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
 
-# Gradle 설정 파일 복사
+# Gradle Wrapper 및 프로젝트 파일 복사
+COPY gradlew /app/
+COPY gradle /app/gradle
 COPY build.gradle settings.gradle /app/
-
-# 소스 코드 복사
 COPY src /app/src
 
-# 애플리케이션 빌드
-RUN gradle build -x test
+# 실행 권한 부여 및 애플리케이션 빌드
+RUN chmod +x /app/gradlew && ./gradlew build -x test --info
 
 # 경량화된 실행 환경
 FROM eclipse-temurin:17-jre
