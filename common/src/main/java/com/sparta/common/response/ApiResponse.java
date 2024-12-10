@@ -1,21 +1,19 @@
 package com.sparta.common.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class ApiResponse<T> {
-    private int status;
-    private String message;
-    private T data;
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record ApiResponse<T>(
+        int status,
+        String message,
+        T data) {
 
+    // 성공 상태
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(ApiStatus.SUCCESS.getCode(), ApiStatus.SUCCESS.getMessage(), data);
     }
 
+    // 실패 상태
     public static <T> ApiResponse<T> fail(ApiStatus status) {
         return new ApiResponse<>(status.getCode(), status.getMessage(), null);
     }
