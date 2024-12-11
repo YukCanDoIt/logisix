@@ -1,9 +1,7 @@
 package com.sparta.delivery.entity;
 
-import com.sparta.delivery.global.BaseEntity;
+import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
@@ -16,24 +14,23 @@ public class DeliveryRecords extends BaseEntity {
     @Column(updatable = false, nullable = false)
     private UUID deliveryRecordId;
 
-    @NotNull
+    @Column(nullable = false)
     private UUID departures;
 
-    @NotNull
+    @Column(nullable = false)
     private UUID arrival;
 
-    @NotBlank
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private DeliveryRecordsStatusEnum status = DeliveryRecordsStatusEnum.WAIT;
 
-    @NotNull
+    @Column(nullable = false)
     private Integer sequence;
 
-    @NotNull
+    @Column(nullable = false)
     private Duration estimatedTime;
 
-    @NotNull
+    @Column(nullable = false)
     private BigDecimal estimatedDist;
 
     private Duration actualTime;

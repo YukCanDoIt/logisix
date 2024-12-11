@@ -1,8 +1,7 @@
 package com.sparta.delivery.entity;
 
-import com.sparta.delivery.global.BaseEntity;
+import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,7 +25,7 @@ public class Deliverers extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private DelivererStatusEnum status = DelivererStatusEnum.WAIT;
 
-    @NotNull
+    @Column(nullable = false)
     private UUID hubId;
 
     @Column(nullable = false)

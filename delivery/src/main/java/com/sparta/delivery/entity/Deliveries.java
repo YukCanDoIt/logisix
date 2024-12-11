@@ -1,9 +1,7 @@
 package com.sparta.delivery.entity;
 
-import com.sparta.delivery.global.BaseEntity;
+import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -23,34 +21,33 @@ public class Deliveries extends BaseEntity {
     @Column(updatable = false, nullable = false)
     private UUID deliveryId;
 
-    @NotNull
+    @Column(nullable = false)
     private UUID sourceHubId;
 
-    @NotBlank
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private DeliveryStatusEnum status = DeliveryStatusEnum.HUB_WAIT;
 
-    @NotNull
+    @Column(nullable = false)
     private String companyAddress;
 
-    @NotBlank
+    @Column(nullable = false)
     private String recipient;
 
-    @NotBlank
+    @Column(nullable = false)
     private String recipientSlackAccount;
 
-    @NotNull
+    @Column(nullable = false)
     private LocalDateTime dispatchDeadline;
 
     private Integer totalSequence;
 
     private Integer currentSeq;
 
-    @NotNull
+    @Column(nullable = false)
     private UUID orderId;
 
-    @NotNull
+    @Column(nullable = false)
     private UUID companyId;
 
     @OneToMany(mappedBy = "delivery", cascade = CascadeType.ALL, orphanRemoval = true)
