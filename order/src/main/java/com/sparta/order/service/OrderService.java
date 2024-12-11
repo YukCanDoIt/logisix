@@ -4,6 +4,7 @@ import com.sparta.order.domain.Order;
 import com.sparta.order.domain.OrderStatus;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
+import com.sparta.order.exception.UnauthorizedException;
 import com.sparta.order.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 public class OrderService {
 
   private final OrderRepository orderRepository;
+  // private final DeliveryService deliveryService; // 배송 서비스 추가
 
   public OrderService(OrderRepository orderRepository) {
     this.orderRepository = orderRepository;
@@ -25,6 +27,12 @@ public class OrderService {
   // 주문 생성
   @Transactional
   public OrderResponse createOrder(OrderRequest orderRequest) {
+    // 배송 생성 로직 추가
+//    UUID deliveryId = deliveryService.createDelivery(
+//        orderRequest.getSourceHub(),
+//        orderRequest.getDestinationHub()
+//    );
+
     Order order = Order.builder()
         .supplierId(orderRequest.getSupplierId())
         .receiverId(orderRequest.getReceiverId())
@@ -44,18 +52,18 @@ public class OrderService {
 
   // 본인 주문 조회
   @Transactional(readOnly = true)
-  public List<OrderResponse> getOrdersByUser(UUID userId) {
+  public List<OrderResponse> getOrdersByUser(UUID userId, String role) {
     return orderRepository.findAll().stream()
-        .filter(order -> order.getSupplierId().equals(userId) && !order.isDelete()) // 본인 주문 & 논리적 삭제 제외
+        .filter(order -> isAccessible(userId, role, order)) // 권한 확인
         .map(this::mapToOrderResponse)
         .collect(Collectors.toList());
   }
 
   // 본인 주문 수정
   @Transactional
-  public OrderResponse updateOrder(UUID id, UUID userId, OrderRequest orderRequest) {
+  public OrderResponse updateOrder(UUID id, UUID userId, OrderRequest orderRequest, String role) {
     Order order = orderRepository.findById(id)
-        .filter(o -> o.getSupplierId().equals(userId) && !o.isDelete()) // 본인 주문 & 논리적 삭제 제외
+        .filter(o -> isAccessible(userId, role, o)) // 권한 확인
         .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없거나 액세스가 거부되었습니다."));
 
     order.setQuantity(orderRequest.getQuantity());
@@ -68,10 +76,14 @@ public class OrderService {
 
   // 본인 주문 삭제
   @Transactional
-  public void deleteOrder(UUID id, UUID userId) {
+  public void deleteOrder(UUID id, UUID userId, String role) {
     Order order = orderRepository.findById(id)
-        .filter(o -> o.getSupplierId().equals(userId)) // 본인 주문인지 확인
-        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없거나 액세스가 거부되었습니다."));
+        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+    // 권한 검증 로직
+    if (!"MASTER_ADMIN".equals(role) && !order.getSupplierId().equals(userId)) {
+      throw new UnauthorizedException("삭제 권한이 없습니다.");
+    }
 
     order.markAsDeleted(); // 논리적 삭제
     orderRepository.save(order);
@@ -97,6 +109,17 @@ public class OrderService {
       return mapToOrderResponse(order);
     } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException("유효하지 않은 상태 값입니다: " + newStatus, e);
+    }
+  }
+
+  // 권한 확인 로직
+  private boolean isAccessible(UUID userId, String role, Order order) {
+    if ("MASTER_ADMIN".equals(role)) {
+      return true; // 마스터 관리자는 모든 주문 접근 가능
+    } else if ("HUB_ADMIN".equals(role)) {
+      return order.getSupplierId().equals(userId); // 허브 관리자는 본인 허브의 주문만 접근 가능
+    } else {
+      return order.getSupplierId().equals(userId); // 기타 사용자: 본인 주문만 접근 가능
     }
   }
 
