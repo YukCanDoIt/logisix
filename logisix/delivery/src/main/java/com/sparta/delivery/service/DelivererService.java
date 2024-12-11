@@ -3,6 +3,7 @@ package com.sparta.delivery.service;
 import com.sparta.delivery.common.ApiResponse;
 import com.sparta.delivery.dto.GetDelivererResponse;
 import com.sparta.delivery.dto.RegisterDelivererRequest;
+import com.sparta.delivery.dto.UpdateDelivererRequest;
 import com.sparta.delivery.entity.Deliverers;
 import com.sparta.delivery.repository.DeliverersJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -52,5 +53,19 @@ public class DelivererService {
 
         return new ApiResponse<>(200, "배송 담당자 조회 성공", GetDelivererResponse.from(deliverer.get()));
 
+    }
+
+    // 배송 담당자 정보 수정
+    public ApiResponse<GetDelivererResponse> updateDeliverer(Long delivererId, UpdateDelivererRequest request) {
+        // 사용자 권한 및 유효성 체크
+
+        Optional<Deliverers> deliverer = deliverersJpaRepository.findByDelivererId(delivererId);
+        if (deliverer.isEmpty()) {
+            return new ApiResponse<>(400, "해당하는 배송 담당자가 없습니다", null);
+        }
+        Deliverers existDeliverer = deliverer.get();
+        existDeliverer.update(request.hubId(), request.type());
+        deliverersJpaRepository.save(existDeliverer);
+        return new ApiResponse<>(200, "배송 담당자 수정 완료", GetDelivererResponse.from(existDeliverer));
     }
 }

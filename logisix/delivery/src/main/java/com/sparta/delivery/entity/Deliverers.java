@@ -44,4 +44,9 @@ public class Deliverers extends BaseEntity {
                 .build();
     }
 
+    public void update(UUID hubId, DelivererTypeEnum type) {
+        this.hubId = hubId;
+        this.type = type;
+    }
+
 }
