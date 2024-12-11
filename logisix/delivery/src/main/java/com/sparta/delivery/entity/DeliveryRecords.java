@@ -1,6 +1,6 @@
 package com.sparta.delivery.entity;
 
-import com.sparta.common.entity.BaseEntity;
+import com.sparta.delivery.common.BaseEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.UuidGenerator;
 

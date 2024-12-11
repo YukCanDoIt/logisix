@@ -1,8 +1,6 @@
 package com.sparta.delivery.common;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.*;
 import lombok.Getter;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
@@ -40,16 +38,20 @@ public abstract class BaseEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    private String tempUsername = "temp_username";
+
     // 생성
-    public void createBase(String username) {
+    @PrePersist
+    public void createBase() {
         this.createdAt = LocalDateTime.now();
-        this.createdBy = username;
+        this.createdBy = tempUsername;
     }
 
     // 수정
-    public void updateBase(String username) {
+    @PreUpdate
+    public void updateBase() {
         this.updatedAt =  LocalDateTime.now();
-        this.updatedBy = username;
+        this.updatedBy = tempUsername;
     }
 
     // 삭제

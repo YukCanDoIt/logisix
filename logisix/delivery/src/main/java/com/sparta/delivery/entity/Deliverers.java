@@ -1,6 +1,6 @@
 package com.sparta.delivery.entity;
 
-import com.sparta.common.entity.BaseEntity;
+import com.sparta.delivery.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,5 +34,14 @@ public class Deliverers extends BaseEntity {
 
     @OneToMany(mappedBy = "deliverer")
     private List<DeliveryRecords> deliveryRecords = new ArrayList<>();
+
+    public static Deliverers create(Long delivererId, UUID hubId, DelivererTypeEnum type) {
+        return Deliverers.builder()
+                .delivererId(delivererId)
+                .hubId(hubId)
+                .type(type)
+                .status(DelivererStatusEnum.WAIT)
+                .build();
+    }
 
 }
