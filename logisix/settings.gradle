@@ -1,0 +1,12 @@
+rootProject.name = 'logisix'
+
+include 'common',
+        'company',
+        'delivery',
+        'gateway',
+        'hub',
+        'order',
+        'product',
+        'server',
+        'slack',
+        'user'
