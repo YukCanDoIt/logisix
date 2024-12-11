@@ -4,16 +4,17 @@ import com.sparta.order.domain.Order;
 import com.sparta.order.domain.OrderStatus;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
+import com.sparta.order.exception.UnauthorizedException;
 import com.sparta.order.repository.OrderRepository;
 import com.sparta.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,8 +35,8 @@ class OrderServiceTest {
   }
 
   @Test
+  @DisplayName("주문 생성 성공")
   void createOrder_Success() {
-    // Given
     OrderRequest request = new OrderRequest(
         UUID.randomUUID(),
         UUID.randomUUID(),
@@ -62,10 +63,8 @@ class OrderServiceTest {
 
     when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
 
-    // When
     OrderResponse response = orderService.createOrder(request);
 
-    // Then
     assertNotNull(response);
     assertEquals(request.getSupplierId(), response.supplierId());
     assertEquals(OrderStatus.PENDING, response.status());
@@ -73,8 +72,8 @@ class OrderServiceTest {
   }
 
   @Test
+  @DisplayName("주문 상태 변경 성공")
   void updateOrderStatus_Success() {
-    // Given
     UUID orderId = UUID.randomUUID();
     String newStatus = "CONFIRMED";
 
@@ -85,26 +84,24 @@ class OrderServiceTest {
 
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    // When
     OrderResponse response = orderService.updateOrderStatus(orderId, newStatus);
 
-    // Then
     assertNotNull(response);
     assertEquals(OrderStatus.CONFIRMED, response.status());
     verify(orderRepository, times(1)).save(order);
   }
 
   @Test
+  @DisplayName("주문 상태 변경 실패 - 유효하지 않은 상태 전환")
   void updateOrderStatus_InvalidTransition() {
-    // Given
     UUID orderId = UUID.randomUUID();
     Order order = Order.builder()
         .id(orderId)
         .status(OrderStatus.CONFIRMED)
         .build();
+
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    // When & Then
     IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
       orderService.updateOrderStatus(orderId, "PENDING");
     });
@@ -114,24 +111,43 @@ class OrderServiceTest {
   }
 
   @Test
-  void getOrdersByUser_Success() {
-    // Given
+  @DisplayName("주문 삭제 실패 - 권한 부족")
+  void deleteOrder_Unauthorized() {
+    UUID orderId = UUID.randomUUID();
     UUID userId = UUID.randomUUID();
+    String role = "SUPPLIER_USER";
+
     Order order = Order.builder()
-        .supplierId(userId)
-        .isDelete(false)
-        .status(OrderStatus.PENDING)
+        .id(orderId)
+        .supplierId(UUID.randomUUID()) // 다른 사용자 ID로 설정
         .build();
 
-    when(orderRepository.findAll()).thenReturn(List.of(order));
+    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    // When
-    List<OrderResponse> responses = orderService.getOrdersByUser(userId);
+    UnauthorizedException exception = assertThrows(UnauthorizedException.class, () -> {
+      orderService.deleteOrder(orderId, userId, role);
+    });
 
-    // Then
-    assertNotNull(responses);
-    assertEquals(1, responses.size());
-    assertEquals(userId, responses.get(0).supplierId());
-    verify(orderRepository, times(1)).findAll();
+    assertEquals("삭제 권한이 없습니다.", exception.getMessage());
+    verify(orderRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("주문 삭제 성공 - MASTER_ADMIN 권한 사용")
+  void deleteOrder_Success_WithRole() {
+    UUID orderId = UUID.randomUUID();
+    UUID userId = UUID.randomUUID();
+    String role = "MASTER_ADMIN";
+
+    Order order = Order.builder()
+        .id(orderId)
+        .supplierId(userId)
+        .build();
+
+    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+    orderService.deleteOrder(orderId, userId, role);
+
+    verify(orderRepository, times(1)).save(order);
   }
 }
