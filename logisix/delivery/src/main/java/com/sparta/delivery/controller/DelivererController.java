@@ -1,6 +1,7 @@
 package com.sparta.delivery.controller;
 
 import com.sparta.delivery.common.ApiResponse;
+import com.sparta.delivery.dto.GetDelivererResponse;
 import com.sparta.delivery.dto.RegisterDelivererRequest;
 import com.sparta.delivery.service.DelivererService;
 import lombok.RequiredArgsConstructor;
@@ -19,5 +20,13 @@ public class DelivererController {
             @RequestBody RegisterDelivererRequest request
     ) {
         return delivererService.registerDeliverer(request);
+    }
+
+    // 배송 담당자 단건 조회
+    @GetMapping("{delivererId}")
+    public ApiResponse<GetDelivererResponse> getDeliverer(
+            @PathVariable Long delivererId
+    ) {
+        return delivererService.getDeliverer(delivererId);
     }
 }
