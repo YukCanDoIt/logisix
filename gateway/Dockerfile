@@ -2,14 +2,19 @@
 FROM gradle:7.3.3-jdk17 AS build
 WORKDIR /app
 
-# Gradle 빌드 파일 복사
+# Gradle 설정 파일 및 Wrapper 스크립트 복사
+COPY gradlew /app/
+COPY gradle /app/gradle
 COPY build.gradle settings.gradle /app/
 
 # 소스 코드 복사
 COPY src /app/src
 
+# 실행 권한 부여
+RUN chmod +x /app/gradlew
+
 # 단위 테스트를 제외하고 애플리케이션 빌드
-RUN gradle build -x test
+RUN ./gradlew build -x test --info
 
 # 우분투 기반 이미지를 사용하여 실행 환경을 준비
 FROM ubuntu:20.04
