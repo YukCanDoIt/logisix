@@ -10,11 +10,6 @@ public record ApiResponse<T>(
 
     // 성공 상태
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(ApiStatus.SUCCESS.getCode(), ApiStatus.SUCCESS.getMessage(), data);
-    }
-
-    // 실패 상태
-    public static <T> ApiResponse<T> fail(ApiStatus status) {
-        return new ApiResponse<>(status.getCode(), status.getMessage(), null);
+        return new ApiResponse<>(200, "Success", data);
     }
 }
