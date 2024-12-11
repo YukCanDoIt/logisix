@@ -39,4 +39,12 @@ public class DelivererController {
     ) {
         return delivererService.updateDeliverer(delivererId, request);
     }
+
+    // 배송 담당자 정보 삭제
+    @DeleteMapping("/{delivererId}")
+    public ApiResponse<Void> deleteDeliverer(
+            @PathVariable Long delivererId
+    ) {
+        return delivererService.deleteDeliverer(delivererId);
+    }
 }
