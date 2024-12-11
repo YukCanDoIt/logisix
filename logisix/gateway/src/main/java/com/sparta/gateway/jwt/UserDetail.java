@@ -7,10 +7,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public record UserDetail(
-        String userId,
+        Long userId,
+        String username,
         String role
-
 ) implements UserDetails {
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role));
@@ -18,11 +19,11 @@ public record UserDetail(
 
     @Override
     public String getPassword() {
-        return null;
+        return null; // 패스워드는 JWT 처리 시 일반적으로 사용되지 않음
     }
 
     @Override
     public String getUsername() {
-        return userId;
+        return username;
     }
 }

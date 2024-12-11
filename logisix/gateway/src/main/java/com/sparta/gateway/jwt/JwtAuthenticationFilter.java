@@ -15,8 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import static com.sparta.gateway.jwt.JwtValidationType.VALID_TOKEN;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -25,15 +23,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final static String TOKEN_PREFIX = "Bearer ";
     private final JwtUtil jwtUtil;
 
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
             final String token = getJwtFromRequest(request);
-            if (jwtUtil.validateToken(token) == VALID_TOKEN) {
-                Long userId = jwtUtil.getUserIdFromJwt(token);
+            if (token != null && jwtUtil.validateToken(token).equals(JwtValidationType.VALID_TOKEN)) {
                 UsernamePasswordAuthenticationToken authentication = jwtUtil.getAuthentication(token);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);

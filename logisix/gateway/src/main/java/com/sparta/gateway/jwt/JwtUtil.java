@@ -23,26 +23,22 @@ import com.sparta.user.entity.Role;
 public class JwtUtil {
 
     private static final String CLAIM_USER_ID = "userId";
+    private static final String CLAIM_USERNAME = "username";
     private static final String CLAIM_USER_ROLE = "role";
-    @Value("${jwt.secret}")
+    @Value("${service.jwt.secret-key}")
     private String JWT_SECRET_KEY;
-    @Value("${jwt.token.expired.time}")
+    @Value("${service.jwt.token.expired.time}")
     private Long TOKEN_EXPIRATION_TIME;
 
-    public Long getUserIdFromJwt(String token) {
-        Claims claims = getClaims(token);
-        return Long.valueOf(claims.get(CLAIM_USER_ID).toString());
-    }
-
-    public String generateToken(String userId, Role role) {
-        final Date now = new Date();
-        final Claims claims = Jwts.claims()
-                .setIssuedAt(now)
-                .setExpiration(new Date(now.getTime() + TOKEN_EXPIRATION_TIME));
+    public String generateToken(String userId, String username, Role role) {
+        Date now = new Date();
+        Claims claims = Jwts.claims().setIssuedAt(now).setExpiration(new Date(now.getTime() + TOKEN_EXPIRATION_TIME));
         claims.put(CLAIM_USER_ID, userId);
-        claims.put(CLAIM_USER_ROLE, role);
+        claims.put(CLAIM_USERNAME, username);
+        claims.put(CLAIM_USER_ROLE, role.name());
+
         return Jwts.builder()
-                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
+                .setHeaderParam("typ", "JWT")
                 .setClaims(claims)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
@@ -51,12 +47,11 @@ public class JwtUtil {
     public UsernamePasswordAuthenticationToken getAuthentication(String token) {
         Claims claims = getClaims(token);
         UserDetails userDetails = new UserDetail(
-                (String) claims.get(CLAIM_USER_ID),
+                Long.parseLong(claims.get(CLAIM_USER_ID).toString()),
+                (String) claims.get(CLAIM_USERNAME),
                 (String) claims.get(CLAIM_USER_ROLE)
         );
-        return new UsernamePasswordAuthenticationToken(
-                userDetails, null, userDetails.getAuthorities()
-        );
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 
     private Claims getClaims(String token) {
