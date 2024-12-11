@@ -138,7 +138,6 @@ services:
       - app-network
     depends_on:
       - eureka-server
-      - delivery-redis
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://delivery-db:5437/deliverydb
       REDIS_HOST: delivery-redis
@@ -151,14 +150,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
-      - "5437:5437"
+      - "5437:5432"
     networks:
       - app-network
-  delivery-redis:
-    image: redis:latest
-    command: redis-server --requirepass systempass
-    ports:
-      - "6380:6380"
     networks:
       - app-network
 
