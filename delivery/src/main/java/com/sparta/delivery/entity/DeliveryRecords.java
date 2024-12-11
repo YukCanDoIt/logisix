@@ -2,6 +2,8 @@ package com.sparta.delivery.entity;
 
 import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.UuidGenerator;
+
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
@@ -10,6 +12,7 @@ import java.util.UUID;
 public class DeliveryRecords extends BaseEntity {
 
     @Id
+    @UuidGenerator
     @GeneratedValue(generator = "UUID")
     @Column(updatable = false, nullable = false)
     private UUID deliveryRecordId;
