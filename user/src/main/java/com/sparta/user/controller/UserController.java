@@ -47,7 +47,8 @@ public class UserController {
             String token = jwtUtil.generateToken(user.getUserId(), user.getUsername(), user.getRole());
             return ResponseEntity.ok(ApiResponse.success(token));
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.badRequest());
+            String jsonResponse = "{\"message\": \"회원 정보가 일치하지 않습니다.\"}";
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(jsonResponse);
         }
     }
 }
