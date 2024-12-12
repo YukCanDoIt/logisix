@@ -2,8 +2,8 @@ package com.sparta.delivery.service;
 
 import com.sparta.delivery.common.ApiResponse;
 import com.sparta.delivery.dto.*;
-import com.sparta.delivery.entity.Deliveries;
-import com.sparta.delivery.entity.DeliveryRecords;
+import com.sparta.delivery.entity.*;
+import com.sparta.delivery.repository.DeliverersJpaRepository;
 import com.sparta.delivery.util.Point;
 import com.sparta.delivery.repository.DeliveriesJpaRepository;
 import com.sparta.delivery.repository.DeliveryRecordsJpaRepository;
@@ -26,6 +26,7 @@ public class DeliveryService {
 
     private final PathService pathService;
     private final KakaoMapService kakaoMapService;
+    private final DeliverersJpaRepository deliverersJpaRepository;
     private final DeliveriesJpaRepository deliveryJpaRepository;
     private final DeliveryRecordsJpaRepository deliveryRecordsJpaRepository;
 
@@ -158,5 +159,38 @@ public class DeliveryService {
         GetDeliveryResponse response = GetDeliveryResponse.create(delivery.get(), deliveryRecordsList);
 
         return new ApiResponse<>(200, "배송 정보 조회 성공", response);
+    }
+
+    // 배송 경로 배송 담당자 수정
+    public ApiResponse<Void> changeDeliverer(UUID deliveryRecordId, ChangeDelivererRequest request) {
+        // 사용자 권한 및 유효성 체크
+
+        Optional<DeliveryRecords> deliveryRecord = deliveryRecordsJpaRepository.findById(deliveryRecordId);
+        if(deliveryRecord.isEmpty()) {
+            return new ApiResponse<>(400, "해당하는 배송 경로 정보가 없습니다", null);
+        }
+
+        DeliveryRecords existRecord = deliveryRecord.get();
+
+        // 변경할 배송 담당자 상태 체크
+        Optional<Deliverers> deliverer = deliverersJpaRepository.findById(request.delivererId());
+        if(deliverer.isEmpty()) {
+            return new ApiResponse<>(400, "해당하는 배송 담당자 정보가 없습니다", null);
+        }
+        Deliverers existDeliverer = deliverer.get();
+        if(existDeliverer.getStatus() != DelivererStatusEnum.WAIT) {
+            return new ApiResponse<>(400, "배송중인 배송 담당자로 변경할 수 없습니다", null);
+        }
+
+        if(existRecord.getDeliverer() == null) {
+            return new ApiResponse<>(400, "아직 배송 담당자가 배정되지 않은 경로입니다", null);
+        } else if (existRecord.getStatus() == DeliveryRecordsStatusEnum.COMPLETED) {
+            return new ApiResponse<>(400, "이미 완료된 배송 경로입니다", null);
+        }
+
+        existRecord.changeDeliverer(existDeliverer);
+        deliveryRecordsJpaRepository.save(existRecord);
+        return new ApiResponse<>(200, "배송 담당자 변경 성공", null);
+
     }
 }

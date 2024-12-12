@@ -3,6 +3,7 @@ package com.sparta.delivery.controller;
 import com.sparta.delivery.common.ApiResponse;
 import com.sparta.delivery.dto.CreateDeliveryRequest;
 import com.sparta.delivery.dto.GetDeliveryResponse;
+import com.sparta.delivery.dto.ChangeDelivererRequest;
 import com.sparta.delivery.service.DeliveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +30,15 @@ public class DeliveryController {
             @PathVariable UUID deliveryId
     ){
         return deliveryService.getDelivery(deliveryId);
+    }
+
+    // 배송 경로 배송 담당자 수정
+    @PatchMapping("/{deliveryRecordId}/change")
+    public ApiResponse<Void> changeDeliverer(
+            @PathVariable UUID deliveryRecordId,
+            @RequestBody ChangeDelivererRequest request
+    ){
+        return deliveryService.changeDeliverer(deliveryRecordId, request);
     }
 
 }

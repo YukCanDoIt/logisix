@@ -78,4 +78,8 @@ public class DeliveryRecords extends BaseEntity {
                 .build();
     }
 
+    public void changeDeliverer(Deliverers deliverer) {
+        this.deliverer = deliverer;
+    }
+
 }
