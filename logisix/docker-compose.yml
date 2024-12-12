@@ -35,98 +35,35 @@ services:
     networks:
       - app-network
 
-  hub-service:
-    image: hub-service:latest
+  core-service:
+    image: core-service:latest
     ports:
       - "19093:19093"
     networks:
       - app-network
     depends_on:
       - eureka-server
-      - hub-redis
+      - core-redis
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://hub-db:5433/hubdb
-      REDIS_HOST: hub-redis
+      SPRING_DATASOURCE_URL: jdbc:postgresql://core-db:5433/coredb
+      REDIS_HOST: core-redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: systempass
-  hub-db:
+  core-db:
     image: postgres:13
     environment:
-      POSTGRES_DB: hubdb
+      POSTGRES_DB: coredb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: systempass
     ports:
       - "5433:5433"
     networks:
       - app-network
-  hub-redis:
+  core-redis:
     image: redis:latest
     command: redis-server --requirepass systempass
     ports:
       - "6379:6379"
-    networks:
-      - app-network
-
-  company-service:
-    image: company-service:latest
-    ports:
-      - "19094:19094"
-    networks:
-      - app-network
-    depends_on:
-      - eureka-server
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://company-db:5434/companydb
-  company-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: companydb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: systempass
-    ports:
-      - "5434:5434"
-    networks:
-      - app-network
-
-  order-service:
-    image: order-service:latest
-    ports:
-      - "19095:19095"
-    networks:
-      - app-network
-    depends_on:
-      - eureka-server
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5435/orderdb
-  order-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: orderdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: systempass
-    ports:
-      - "5435:5435"
-    networks:
-      - app-network
-
-  product-service:
-    image: product-service:latest
-    ports:
-      - "19096:19096"
-    networks:
-      - app-network
-    depends_on:
-      - eureka-server
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5436/productdb
-  product-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: productdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: systempass
-    ports:
-      - "5436:5436"
     networks:
       - app-network
 
