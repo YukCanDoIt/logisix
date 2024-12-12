@@ -1,4 +1,4 @@
-package com.sparta.user.entity;
+package com.sparta.user.domain;
 
 public enum Role {
     MASTER, // 마스터
