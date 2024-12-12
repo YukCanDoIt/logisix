@@ -85,8 +85,8 @@ public class PathService {
 
     private List<UUID> reconstructPath(Map<UUID, UUID> previousNodes, UUID endHubId) {
         List<UUID> path = new LinkedList<>();
-        for (UUID at = endHubId; at != null; at = previousNodes.get(at)) {
-            path.add(0, at);
+        for (UUID arrival = endHubId; arrival != null; arrival = previousNodes.get(arrival)) {
+            path.add(0, arrival);
         }
         return path;
     }

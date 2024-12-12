@@ -3,43 +3,52 @@ package com.sparta.delivery.service;
 import com.sparta.delivery.dto.KakaoRouteResponse;
 import com.sparta.delivery.entity.Point;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.concurrent.CompletableFuture;
 
 
 @Service
 public class KakaoMapService {
 
     @Value("${kakao.api.key}")
-    private String KAKAO_API_KEY;
-    private static final String DIRECTIONS_URL = "https://apis-navi.kakaomobility.com/v1/directions";
+    private String kakaoApiKey;
 
-    public KakaoRouteResponse getRoute(Point origin, Point destination) {
-        // 요청 URL 생성
-        String url = UriComponentsBuilder.fromUriString(DIRECTIONS_URL)
-                .queryParam("origin", origin.getLongitude() + "," + origin.getLatitude())
-                .queryParam("destination", destination.getLongitude() + "," + destination.getLatitude())
-                .queryParam("priority", "SHORTEST")
-                .toUriString();
+    @Async
+    public CompletableFuture<KakaoRouteResponse> getRouteAsync(Point origin, Point destination) {
+        try {
+            String url = UriComponentsBuilder.newInstance()
+                    .scheme("https")
+                    .host("apis-navi.kakaomobility.com")
+                    .path("/v1/directions")
+                    .queryParam("origin", origin.getLongitude() + "," + origin.getLatitude())
+                    .queryParam("destination", destination.getLongitude() + "," + destination.getLatitude())
+                    .queryParam("priority", "SHORTEST")
+                    .build()
+                    .toUriString();
 
-        // HTTP 헤더 설정
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "KakaoAK " + KAKAO_API_KEY);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "KakaoAK " + kakaoApiKey);
 
-        // API 호출
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<KakaoRouteResponse> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                new org.springframework.http.HttpEntity<>(headers),
-                KakaoRouteResponse.class
-        );
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<KakaoRouteResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    KakaoRouteResponse.class
+            );
 
-        return response.getBody();
+            return CompletableFuture.completedFuture(response.getBody());
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
 }
