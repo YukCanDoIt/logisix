@@ -60,7 +60,7 @@ public class JwtAuthenticationFilter implements GlobalFilter {
                     .build()
                     .parseClaimsJws(token);
 
-            String userId = claimsJws.getBody().get("user_id", String.class);
+            Long userId = claimsJws.getBody().get("user_id", Long.class);
             return authService.verifyUser(userId);
         } catch (Exception e) {
             return false;
