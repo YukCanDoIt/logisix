@@ -34,4 +34,12 @@ public class UserService {
         userRepository.save(newUser);
         return UserResponse.from(newUser);
     }
+
+    public User validateUser(String username, String password) {
+        User user = userRepository.findByUsername(username);
+        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+            return user;
+        }
+        return null;
+    }
 }

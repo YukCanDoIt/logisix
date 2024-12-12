@@ -1,9 +1,12 @@
 package com.sparta.user.controller;
 
+import com.sparta.user.domain.User;
 import com.sparta.user.dto.ApiResponse;
 import com.sparta.user.dto.UserCreateRequest;
+import com.sparta.user.dto.UserLoginRequest;
 import com.sparta.user.dto.UserResponse;
 import com.sparta.user.service.UserService;
+import com.sparta.user.util.JwtUtil;
 import jakarta.ws.rs.ClientErrorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +14,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import jakarta.validation.Valid;
 
 @RestController
@@ -19,9 +21,11 @@ import jakarta.validation.Valid;
 public class UserController {
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/signUp")
@@ -33,6 +37,17 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.badRequest());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.internalServerError());
+        }
+    }
+
+    @PostMapping("/signIn")
+    public ResponseEntity<?> loginUser(@Valid @RequestBody UserLoginRequest request) {
+        User user = userService.validateUser(request.username(), request.password());
+        if (user != null) {
+            String token = jwtUtil.generateToken(user.getUserId(), user.getUsername(), user.getRole());
+            return ResponseEntity.ok(ApiResponse.success(token));
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.badRequest());
         }
     }
 }
