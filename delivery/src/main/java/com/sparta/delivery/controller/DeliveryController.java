@@ -2,12 +2,12 @@ package com.sparta.delivery.controller;
 
 import com.sparta.delivery.common.ApiResponse;
 import com.sparta.delivery.dto.CreateDeliveryRequest;
+import com.sparta.delivery.dto.GetDeliveryResponse;
 import com.sparta.delivery.service.DeliveryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,4 +22,13 @@ public class DeliveryController {
     ) {
         return deliveryService.createDelivery(request);
     }
+
+    // 배송 단건 조회
+    @GetMapping("/{deliveryId}")
+    public ApiResponse<GetDeliveryResponse> getDelivery(
+            @PathVariable UUID deliveryId
+    ){
+        return deliveryService.getDelivery(deliveryId);
+    }
+
 }

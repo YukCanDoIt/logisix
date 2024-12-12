@@ -1,6 +1,7 @@
 package com.sparta.delivery.entity;
 
 import com.sparta.delivery.common.BaseEntity;
+import com.sparta.delivery.util.DurationToIntervalConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,11 +40,13 @@ public class DeliveryRecords extends BaseEntity {
     private Integer sequence;
 
     @Column(nullable = false)
+    @Convert(converter = DurationToIntervalConverter.class)
     private Duration estimatedTime;
 
     @Column(nullable = false)
     private BigDecimal estimatedDist;
 
+    @Convert(converter = DurationToIntervalConverter.class)
     private Duration actualTime;
 
     private BigDecimal actualDist;
