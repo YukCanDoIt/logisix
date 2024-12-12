@@ -15,6 +15,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Getter
+@Setter
 public class Deliveries extends BaseEntity {
 
     @Id
@@ -39,7 +40,7 @@ public class Deliveries extends BaseEntity {
     @Column(nullable = false)
     private String recipientSlackAccount;
 
-    @Column(nullable = false)
+    //    @Column(nullable = false)
     private LocalDateTime dispatchDeadline;
 
     private Integer totalSequence;
@@ -54,5 +55,24 @@ public class Deliveries extends BaseEntity {
 
     @OneToMany(mappedBy = "delivery", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DeliveryRecords> deliveryRecords = new ArrayList<>();
+
+    public static Deliveries create(
+            UUID orderId,
+            UUID sourceHubId,
+            UUID companyId,
+            String companyAddress,
+            String recipient,
+            String recipientSlackAccount
+    ) {
+        return Deliveries.builder()
+                .orderId(orderId)
+                .sourceHubId(sourceHubId)
+                .companyId(companyId)
+                .status(DeliveryStatusEnum.HUB_WAIT)
+                .companyAddress(companyAddress)
+                .recipient(recipient)
+                .recipientSlackAccount(recipientSlackAccount)
+                .build();
+    }
 
 }
