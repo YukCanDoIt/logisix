@@ -61,7 +61,7 @@ public class HubService {
   public Page<HubResponseDto> getHubs(int size, String keyword, Direction direction,
       Integer page
   ) {
-    Pageable pageable = PageRequest.of(page, size);
+    Pageable pageable = PageRequest.of(page, size, direction);
 
     return hubRepository.findByHubNameContaining(keyword, pageable)
         .map(hub -> new HubResponseDto(hub.getHubName(), hub.getAddress(), hub.getLongitude(),
