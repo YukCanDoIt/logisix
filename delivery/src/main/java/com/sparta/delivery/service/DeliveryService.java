@@ -62,7 +62,7 @@ public class DeliveryService {
 
             return new ApiResponse<>(200, "배송 생성 성공", null);
         } catch (Exception e) {
-            logger.error("Error occurred while creating delivery: {}", e.getMessage(), e);
+            logger.error("createDelivery failed: {}", e.getMessage(), e);
             return new ApiResponse<>(500, "배송 생성 실패", null);
         }
     }
@@ -165,32 +165,40 @@ public class DeliveryService {
     public ApiResponse<Void> changeDeliverer(UUID deliveryRecordId, ChangeDelivererRequest request) {
         // 사용자 권한 및 유효성 체크
 
-        Optional<DeliveryRecords> deliveryRecord = deliveryRecordsJpaRepository.findById(deliveryRecordId);
-        if(deliveryRecord.isEmpty()) {
-            return new ApiResponse<>(400, "해당하는 배송 경로 정보가 없습니다", null);
-        }
+        try {
+            // 배송 경로 정보 확인
+            DeliveryRecords existRecord = deliveryRecordsJpaRepository.findById(deliveryRecordId)
+                    .orElseThrow(() -> new IllegalArgumentException("해당하는 배송 경로 정보가 없습니다"));
 
-        DeliveryRecords existRecord = deliveryRecord.get();
+            // 배송 담당자 정보 확인
+            Deliverers existDeliverer = deliverersJpaRepository.findById(request.delivererId())
+                    .orElseThrow(() -> new IllegalArgumentException("해당하는 배송 담당자 정보가 없습니다"));
 
-        // 변경할 배송 담당자 상태 체크
-        Optional<Deliverers> deliverer = deliverersJpaRepository.findById(request.delivererId());
-        if(deliverer.isEmpty()) {
-            return new ApiResponse<>(400, "해당하는 배송 담당자 정보가 없습니다", null);
-        }
-        Deliverers existDeliverer = deliverer.get();
-        if(existDeliverer.getStatus() != DelivererStatusEnum.WAIT) {
-            return new ApiResponse<>(400, "배송중인 배송 담당자로 변경할 수 없습니다", null);
-        }
+            // 배송 담당자 상태 확인
+            if (existDeliverer.getStatus() != DelivererStatusEnum.WAIT) {
+                return new ApiResponse<>(400, "배송중인 배송 담당자로 변경할 수 없습니다", null);
+            }
 
-        if(existRecord.getDeliverer() == null) {
-            return new ApiResponse<>(400, "아직 배송 담당자가 배정되지 않은 경로입니다", null);
-        } else if (existRecord.getStatus() == DeliveryRecordsStatusEnum.COMPLETED) {
-            return new ApiResponse<>(400, "이미 완료된 배송 경로입니다", null);
-        }
+            // 배송 경로 상태 확인
+            if (existRecord.getDeliverer() == null) {
+                return new ApiResponse<>(400, "아직 배송 담당자가 배정되지 않은 경로입니다", null);
+            } else if (existRecord.getStatus() == DeliveryRecordsStatusEnum.COMPLETED) {
+                return new ApiResponse<>(400, "이미 완료된 배송 경로입니다", null);
+            }
 
-        existRecord.changeDeliverer(existDeliverer);
-        deliveryRecordsJpaRepository.save(existRecord);
-        return new ApiResponse<>(200, "배송 담당자 변경 성공", null);
+            // 배송 담당자 변경
+            existRecord.changeDeliverer(existDeliverer);
+            deliveryRecordsJpaRepository.save(existRecord);
+
+            return new ApiResponse<>(200, "배송 담당자 변경 성공", null);
+
+        } catch (IllegalArgumentException e) {
+            logger.warn("Validation error: {}", e.getMessage());
+            return new ApiResponse<>(400, e.getMessage(), null);
+        } catch (Exception e) {
+            logger.error("Unexpected error while changing deliverer: {}", e.getMessage(), e);
+            return new ApiResponse<>(500, "배송 담당자 변경 중 에러가 발생했습니다", null);
+        }
 
     }
 }
