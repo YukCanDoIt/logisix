@@ -40,7 +40,7 @@ public class Deliveries extends BaseEntity {
     @Column(nullable = false)
     private String recipientSlackAccount;
 
-    //    @Column(nullable = false)
+    @Column(nullable = false)
     private LocalDateTime dispatchDeadline;
 
     private Integer totalSequence;
