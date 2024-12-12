@@ -1,14 +1,17 @@
-package com.sparta.common.response;
+package com.sparta.core.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
-    int status,
-    String message,
+    int statusCode,
     T data) {
 
+  public static ApiResponse<Void> success() {
+    return new ApiResponse<>(200, null);
+  }
+
   public static <T> ApiResponse<T> success(T data) {
-    return new ApiResponse<>(200, "Success", data);
+    return new ApiResponse<>(200, data);
   }
 }
