@@ -1,6 +1,5 @@
-package com.sparta.user.entity;
+package com.sparta.user.domain;
 
-import com.sparta.common.entity.BaseEntity;
 import lombok.*;
 import jakarta.persistence.*;
 
