@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -50,8 +51,13 @@ public class DeliveryService {
             // 마지막 허브에서 업체까지의 경로 추가
             addFinalDeliveryRecord(deliveryRecordsList, delivery);
 
+            // 배송 시한 업데이트
+            updateDispatchDeadline(delivery, deliveryRecordsList, request);
+
             // 배송 데이터 저장
             saveDelivery(delivery, deliveryRecordsList);
+
+            // 슬랙 메시지 발송
 
             return new ApiResponse<>(200, "배송 생성 성공", null);
         } catch (Exception e) {
@@ -65,9 +71,9 @@ public class DeliveryService {
                 request.orderId(),
                 request.sourceHubId(),
                 request.destinationId(),
-                "tempCompanyAddress",
-                "tempRecipient",
-                "tempRecipientSlackAccount"
+                request.companyAddress(),
+                request.recipient(),
+                request.recipientSlackAccount()
         );
     }
 
@@ -119,6 +125,16 @@ public class DeliveryService {
                     logger.error("addFinalDeliveryRecord failed: {}", e.getMessage(), e);
                     return null;
                 });
+    }
+
+    private void updateDispatchDeadline(Deliveries delivery, List<DeliveryRecords> deliveryRecordsList, CreateDeliveryRequest request) {
+        Duration totalEstimatedTime = deliveryRecordsList.stream()
+                .map(DeliveryRecords::getEstimatedTime)
+                .reduce(Duration.ZERO, Duration::plus);
+
+        LocalDateTime dispatchDeadline = request.deliverDate().minus(totalEstimatedTime);
+
+        delivery.setDispatchDeadline(dispatchDeadline);
     }
 
     private void saveDelivery(Deliveries delivery, List<DeliveryRecords> deliveryRecordsList) {
