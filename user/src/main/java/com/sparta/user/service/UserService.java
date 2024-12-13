@@ -94,7 +94,7 @@ public class UserService {
     // 회원 권한 부여
     @Transactional
     public void grantRole(UserGrantRoleRequest request, String updatedBy) {
-        Long userId;
+        long userId;
         try {
             userId = Long.parseLong(request.user_id());
         } catch (NumberFormatException e) {
