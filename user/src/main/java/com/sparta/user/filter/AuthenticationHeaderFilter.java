@@ -72,7 +72,7 @@ public class AuthenticationHeaderFilter extends OncePerRequestFilter {
             request.setAttribute("username", username);
             request.setAttribute("role", role);
 
-            log.info("사용자 정보 설정: userId={}, username={}, role={}", userId, username, role);
+            log.info("HttpServletRequest에 설정된 사용자 정보 설정: userId={}, username={}, role={}", userId, username, role);
 
         } catch (LogisixException e) {
             throw e;
