@@ -2,11 +2,14 @@ package com.sparta.order.service;
 
 import com.sparta.order.client.DeliveryClient;
 import com.sparta.order.domain.Order;
+import com.sparta.order.domain.OrderItem;
 import com.sparta.order.domain.OrderStatus;
+import com.sparta.order.dto.OrderItemResponse;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
 import com.sparta.order.exception.UnauthorizedException;
 import com.sparta.order.repository.OrderRepository;
+import com.sparta.user.entity.Role;  // Role Enum을 import
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,66 +32,84 @@ public class OrderService {
   // 주문 생성
   @Transactional
   public OrderResponse createOrder(OrderRequest orderRequest) {
-    // Order를 먼저 저장하여 ID를 생성
+    validateOrderRequest(orderRequest);
+
     Order order = Order.builder()
-        .supplierId(orderRequest.getSupplierId())
-        .receiverId(orderRequest.getReceiverId())
-        .productId(orderRequest.getProductId())
-        .quantity(orderRequest.getQuantity())
-        .requestDetails(orderRequest.getRequestDetails())
+        .supplierId(orderRequest.supplierId())
+        .receiverId(orderRequest.receiverId())
+        .hubId(orderRequest.hubId())
+        .orderItems(orderRequest.orderItems().stream()
+            .map(item -> OrderItem.builder()
+                .productId(item.productId())
+                .quantity(item.quantity())  // 여기서 quantity를 사용
+                .pricePerUnit(item.pricePerUnit())
+                .build())
+            .collect(Collectors.toList()))
+        .expectedDeliveryDate(orderRequest.expectedDeliveryDate())
+        .orderNote(orderRequest.orderNote())
         .status(OrderStatus.PENDING)
         .createdAt(LocalDateTime.now())
-        .updatedAt(LocalDateTime.now())
         .build();
 
     orderRepository.save(order);
 
-    // 생성된 Order ID로 배송 요청
     UUID deliveryId = deliveryClient.createDelivery(order.getId(), orderRequest);
-
-    // 배송 ID 업데이트
     order.setDeliveryId(deliveryId);
-    orderRepository.save(order);
-
-    return mapToOrderResponse(order);
-  }
-
-  // 본인 주문 조회
-  @Transactional(readOnly = true)
-  public List<OrderResponse> getOrdersByUser(UUID userId, String role) {
-    return orderRepository.findAll().stream()
-        .filter(order -> isAccessible(userId, role, order) && !order.isDelete()) // 삭제된 데이터 제외
-        .map(this::mapToOrderResponse)
-        .collect(Collectors.toList());
-  }
-
-  // 본인 주문 수정
-  @Transactional
-  public OrderResponse updateOrder(UUID id, UUID userId, OrderRequest orderRequest, String role) {
-    Order order = orderRepository.findById(id)
-        .filter(o -> isAccessible(userId, role, o) && !o.isDelete()) // 권한과 삭제 상태 검증
-        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없거나 액세스가 거부되었습니다."));
-
-    order.setQuantity(orderRequest.getQuantity());
-    order.setRequestDetails(orderRequest.getRequestDetails());
     order.setUpdatedAt(LocalDateTime.now());
     orderRepository.save(order);
 
     return mapToOrderResponse(order);
   }
 
-  // 본인 주문 삭제
+  // 사용자별 주문 조회
+  @Transactional(readOnly = true)
+  public List<OrderResponse> getOrdersByUser(UUID userId, String role) {
+    Role userRole = parseRole(role);  // Role Enum으로 변환
+
+    return orderRepository.findAll().stream()
+        .filter(order -> isAccessible(userId, userRole, order) && !order.isDelete())
+        .map(this::mapToOrderResponse)
+        .collect(Collectors.toList());
+  }
+
+  // 주문 수정
   @Transactional
-  public void deleteOrder(UUID id, UUID userId, String role) {
+  public OrderResponse updateOrder(UUID id, UUID userId, OrderRequest orderRequest, String role) {
+    Role userRole = parseRole(role);  // Role Enum으로 변환
+
     Order order = orderRepository.findById(id)
-        .filter(o -> !o.isDelete()) // 삭제된 데이터 제외
+        .filter(o -> isAccessible(userId, userRole, o) && !o.isDelete())
         .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
-    if (!"MASTER_ADMIN".equals(role) && !order.getSupplierId().equals(userId)) {
+    List<OrderItem> updatedItems = orderRequest.orderItems().stream()
+        .map(item -> OrderItem.builder()
+            .productId(item.productId())
+            .quantity(item.quantity())  // quantity를 사용
+            .pricePerUnit(item.pricePerUnit())
+            .build())
+        .collect(Collectors.toList());
+
+    order.updateOrder(updatedItems, orderRequest.orderNote(), orderRequest.expectedDeliveryDate());
+    order.setUpdatedAt(LocalDateTime.now());
+    orderRepository.save(order);
+
+    return mapToOrderResponse(order);
+  }
+
+  // 주문 삭제 (논리 삭제)
+  @Transactional
+  public void deleteOrder(UUID id, UUID userId, String role) {
+    Role userRole = parseRole(role);  // Role Enum으로 변환
+
+    Order order = orderRepository.findById(id)
+        .filter(o -> !o.isDelete())
+        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+    if (!isAccessible(userId, userRole, order)) {
       throw new UnauthorizedException("삭제 권한이 없습니다.");
     }
 
-    order.markAsDeleted(); // 논리적 삭제
+    order.markAsDeleted();
     orderRepository.save(order);
   }
 
@@ -96,15 +117,14 @@ public class OrderService {
   @Transactional
   public OrderResponse updateOrderStatus(UUID id, String newStatus) {
     Order order = orderRepository.findById(id)
-        .filter(o -> !o.isDelete()) // 삭제된 데이터 제외
-        .orElseThrow(() -> new IllegalArgumentException("ID가 있는 주문을 찾을 수 없습니다.: " + id));
+        .filter(o -> !o.isDelete())
+        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
-    OrderStatus status = OrderStatus.valueOf(newStatus.toUpperCase());
-
-    if (order.getStatus() == OrderStatus.CONFIRMED && status == OrderStatus.PENDING) {
-      throw new IllegalStateException("CONFIRMED 상태에서 PENDING으로 변경할 수 없습니다.");
+    if (order.getIsDeliveryStarted()) {
+      throw new IllegalStateException("배송이 시작된 후에는 상태를 변경할 수 없습니다.");
     }
 
+    OrderStatus status = OrderStatus.valueOf(newStatus.toUpperCase());
     order.setStatus(status);
     order.setUpdatedAt(LocalDateTime.now());
     orderRepository.save(order);
@@ -112,29 +132,51 @@ public class OrderService {
     return mapToOrderResponse(order);
   }
 
-  // 권한 확인 로직
-  private boolean isAccessible(UUID userId, String role, Order order) {
-    if ("MASTER_ADMIN".equals(role)) {
-      return true; // 마스터 관리자는 모든 주문 접근 가능
-    } else if ("HUB_ADMIN".equals(role)) {
-      return order.getSupplierId().equals(userId); // 허브 관리자는 본인 허브의 주문만 접근 가능
-    } else {
-      return order.getSupplierId().equals(userId); // 기타 사용자: 본인 주문만 접근 가능
+  // 필수 필드 검증
+  private void validateOrderRequest(OrderRequest orderRequest) {
+    if (orderRequest.supplierId() == null || orderRequest.receiverId() == null
+        || orderRequest.hubId() == null || orderRequest.orderItems().isEmpty()) {
+      throw new IllegalArgumentException("필수 필드가 누락되었습니다.");
     }
   }
 
-  // Order -> OrderResponse 매핑 메서드
+  // 권한 검증
+  private boolean isAccessible(UUID userId, Role role, Order order) {
+    if (role == Role.MASTER) {
+      return true;
+    } else if (role == Role.HUB_MANAGER) {
+      return order.getHubId().equals(userId); // 담당 허브 관리자의 권한 체크
+    } else if (role == Role.DELIVERER || role == Role.COMPANY_MANAGER) {
+      return order.getSupplierId().equals(userId); // 배송 담당자 또는 업체 담당자의 권한 체크
+    }
+    return false;
+  }
+
+  // Role Enum 값으로 변환하는 메서드
+  private Role parseRole(String role) {
+    try {
+      return Role.valueOf(role);  // Role Enum으로 변환
+    } catch (IllegalArgumentException e) {
+      throw new RuntimeException("잘못된 권한 값입니다.");  // 예외 처리
+    }
+  }
+
+  // Order -> OrderResponse 매핑
   private OrderResponse mapToOrderResponse(Order order) {
+    List<OrderItemResponse> orderItemResponses = order.getOrderItems().stream()
+        .map(item -> new OrderItemResponse(item.getProductId(), item.getQuantity(), item.getPricePerUnit()))
+        .collect(Collectors.toList());
+
     return new OrderResponse(
         order.getId(),
         order.getSupplierId(),
         order.getReceiverId(),
-        order.getProductId(),
-        order.getQuantity(),
-        order.getRequestDetails(),
-        order.getDeliveryId(),
-        order.isDelete(),
-        order.getStatus()
+        order.getHubId(),
+        orderItemResponses,
+        order.getOrderNote(), // orderNote 추가
+        order.getStatus(),
+        order.getDeliveryId(), // deliveryId 추가
+        order.getRequestDetails() // requestDetails 추가
     );
   }
 }

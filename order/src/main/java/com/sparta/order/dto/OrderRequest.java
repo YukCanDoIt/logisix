@@ -1,21 +1,20 @@
 package com.sparta.order.dto;
 
-import com.sparta.order.domain.OrderStatus;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@AllArgsConstructor // 모든 필드를 포함한 생성자 생성
-@NoArgsConstructor  // 기본 생성자 생성
-public class OrderRequest {
-  private UUID supplierId;
-  private UUID receiverId;
-  private UUID productId;
-  private int quantity;
-  private String requestDetails;
-  private String sourceHub;
-  private String destinationHub;
-  private OrderStatus status;
+public record OrderRequest(
+    UUID supplierId,
+    UUID receiverId,
+    UUID hubId,
+    List<OrderItemRequest> orderItems,
+    LocalDateTime expectedDeliveryDate,
+    String orderNote,
+    String requestDetails
+) {
+  // orderItems 반환 메서드
+  public List<OrderItemRequest> getOrderItems() {
+    return this.orderItems;
+  }
 }
