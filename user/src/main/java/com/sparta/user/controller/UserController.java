@@ -1,5 +1,6 @@
 package com.sparta.user.controller;
 
+import com.sparta.user.domain.Role;
 import com.sparta.user.domain.User;
 import com.sparta.user.dto.*;
 import com.sparta.user.service.UserService;
@@ -89,6 +90,29 @@ public class UserController {
             return ResponseEntity.ok(ApiResponse.success("사용자 정보가 삭제되었습니다."));
         } catch (NumberFormatException e) {
             throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        } catch (LogisixException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new LogisixException(ErrorCode.API_CALL_FAILED);
+        }
+    }
+
+    @PostMapping("/grant_role")
+    public ResponseEntity<?> grantRole(
+            @Valid @RequestBody UserGrantRoleRequest request,
+            HttpServletRequest httpRequest) {
+        try {
+            // 현재 요청자의 MASTER 권한 확인
+            String requesterRole = httpRequest.getHeader("X-User-Role");
+            String updatedBy = httpRequest.getHeader("X-User-Name");
+            if (!Role.MASTER.name().equals(requesterRole)) {
+                throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+            }
+
+            // 권한 부여
+            userService.grantRole(request, updatedBy);
+
+            return ResponseEntity.ok(ApiResponse.success("권한이 성공적으로 부여되었습니다."));
         } catch (LogisixException e) {
             throw e;
         } catch (Exception e) {

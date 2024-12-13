@@ -1,6 +1,8 @@
 package com.sparta.user.service;
 
+import com.sparta.user.domain.Role;
 import com.sparta.user.dto.UserCreateRequest;
+import com.sparta.user.dto.UserGrantRoleRequest;
 import com.sparta.user.dto.UserResponse;
 import com.sparta.user.domain.User;
 import com.sparta.user.dto.UserUpdateRequest;
@@ -86,6 +88,32 @@ public class UserService {
         }
 
         user.deleteBase(deletedBy);
+        userRepository.save(user);
+    }
+
+    // 회원 권한 부여
+    @Transactional
+    public void grantRole(UserGrantRoleRequest request, String updatedBy) {
+        Long userId;
+        try {
+            userId = Long.parseLong(request.user_id());
+        } catch (NumberFormatException e) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LogisixException(ErrorCode.USER_NOT_FOUND));
+
+        Role newRole;
+        try {
+            newRole = Role.valueOf(request.role());
+        } catch (IllegalArgumentException e) {
+            throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        user.grantRole(newRole, updatedBy);
+        user.updateBase(updatedBy);
+
         userRepository.save(user);
     }
 
