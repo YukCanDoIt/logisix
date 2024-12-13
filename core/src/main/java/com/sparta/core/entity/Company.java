@@ -1,5 +1,6 @@
 package com.sparta.core.entity;
 
+import com.sparta.core.dto.CompanyRequest;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -48,16 +49,13 @@ public class Company extends Base {
   @Column(name = "location", nullable = false)
   private Point location;
 
-  public Company(
-      String companyName, String address, Long latitude, Long longitude, UUID hubId,
-      CompanyTypeEnum type,
-      Point location) {
-    this.companyName = companyName;
-    this.address = address;
-    this.latitude = latitude;
-    this.longitude = longitude;
-    this.hubId = hubId;
-    this.type = type;
+  public Company(CompanyRequest companyRequest, Point location) {
+    this.companyName = companyRequest.companyName();
+    this.address = companyRequest.address();
+    this.latitude = companyRequest.latitude();
+    this.longitude = companyRequest.longitude();
+    this.hubId = companyRequest.hubId();
+    this.type = companyRequest.companyType();
     this.location = location;
   }
 

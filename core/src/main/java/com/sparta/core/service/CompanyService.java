@@ -1,9 +1,8 @@
 package com.sparta.core.service;
 
-import com.sparta.core.dto.CompanyRequestDto;
-import com.sparta.core.dto.CompanyResponseDto;
+import com.sparta.core.dto.CompanyRequest;
+import com.sparta.core.dto.CompanyResponse;
 import com.sparta.core.entity.Company;
-import com.sparta.core.entity.Hub;
 import com.sparta.core.exception.ApiException;
 import com.sparta.core.exception.ErrorCode;
 import com.sparta.core.repository.CompanyRepository;
@@ -31,25 +30,21 @@ public class CompanyService {
     this.geometryFactory = new GeometryFactory();
   }
 
-  public void createCompany(CompanyRequestDto companyRequestDto) {
+  public void createCompany(CompanyRequest companyRequest) {
     Optional<Company> optionalCompany = Optional.ofNullable(
-        companyRepository.findByCompanyName(companyRequestDto.companyName()));
+        companyRepository.findByCompanyName(companyRequest.companyName()));
 
     if (optionalCompany.isPresent()) {
       throw new ApiException(ErrorCode.DUPLICATE_VALUE);
     }
 
-    Coordinate coordinate = new Coordinate(companyRequestDto.longitude(),
-        companyRequestDto.latitude());
-    Company company = new Company(companyRequestDto.companyName(), companyRequestDto.address(),
-        companyRequestDto.latitude(), companyRequestDto.longitude(), companyRequestDto.hubId(),
-        companyRequestDto.companyType(),
-        geometryFactory.createPoint(coordinate));
-
+    Coordinate coordinate = new Coordinate(companyRequest.longitude(),
+        companyRequest.latitude());
+    Company company = new Company(companyRequest, geometryFactory.createPoint(coordinate));
     companyRepository.save(company);
   }
 
-  public CompanyResponseDto getCompany(UUID companyId) {
+  public CompanyResponse getCompany(UUID companyId) {
     Optional<Company> companyOptional = companyRepository.findById(companyId);
 
     if (companyOptional.isEmpty()) {
@@ -57,23 +52,18 @@ public class CompanyService {
     }
 
     Company company = companyOptional.get();
-    return new CompanyResponseDto(company.getCompanyName(), company.getAddress(),
-        company.getType(), company.getLatitude(), company.getLongitude(),
-        company.getHubId(), company.getCompanyManagerId());
+    return CompanyResponse.from(company);
   }
 
-  public Page<CompanyResponseDto> getCompanies(int size, String keyword, Direction direction,
+  public Page<CompanyResponse> getCompanies(int size, String keyword, Direction direction,
       Integer page) {
     Pageable pageable = PageRequest.of(page, size, direction);
-
     return companyRepository.findByCompanyNameContaining(keyword, pageable)
-        .map(company -> new CompanyResponseDto(company.getCompanyName(), company.getAddress(),
-            company.getType(), company.getLatitude(), company.getLongitude(),
-            company.getHubId(), company.getCompanyManagerId()));
+        .map(CompanyResponse::from);
   }
 
   @Transactional
-  public void updateCompany(UUID companyId, @Valid CompanyRequestDto companyRequestDto) {
+  public void updateCompany(UUID companyId, @Valid CompanyRequest companyRequest) {
     Optional<Company> companyOptional = companyRepository.findById(companyId);
 
     if (companyOptional.isEmpty()) {
@@ -82,14 +72,9 @@ public class CompanyService {
 
     Company fetchedCompany = companyOptional.get();
 
-    Coordinate coordinate = new Coordinate(companyRequestDto.longitude(),
-        companyRequestDto.latitude());
-    Company company = new Company(companyRequestDto.companyName(), companyRequestDto.address(),
-        companyRequestDto.latitude(),
-        companyRequestDto.longitude(),
-        companyRequestDto.hubId(),
-        companyRequestDto.companyType(),
-        geometryFactory.createPoint(coordinate)
+    Coordinate coordinate = new Coordinate(companyRequest.longitude(),
+        companyRequest.latitude());
+    Company company = new Company(companyRequest, geometryFactory.createPoint(coordinate)
     );
 
     fetchedCompany.update(company);

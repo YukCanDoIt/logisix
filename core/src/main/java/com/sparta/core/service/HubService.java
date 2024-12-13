@@ -1,7 +1,7 @@
 package com.sparta.core.service;
 
-import com.sparta.core.dto.HubRequestDto;
-import com.sparta.core.dto.HubResponseDto;
+import com.sparta.core.dto.HubRequest;
+import com.sparta.core.dto.HubResponse;
 import com.sparta.core.entity.Hub;
 import com.sparta.core.exception.ApiException;
 import com.sparta.core.exception.ErrorCode;
@@ -30,23 +30,20 @@ public class HubService {
   }
 
 
-  public void createHub(HubRequestDto hubRequestDto) {
+  public void createHub(HubRequest hubRequest) {
     Optional<Hub> hubOptional = Optional.ofNullable(
-        hubRepository.findByHubName(hubRequestDto.hubName()));
+        hubRepository.findByHubName(hubRequest.hubName()));
 
     if (hubOptional.isPresent()) {
       throw new ApiException(ErrorCode.DUPLICATE_VALUE);
     }
 
-    Coordinate coordinate = new Coordinate(hubRequestDto.longitude(), hubRequestDto.latitude());
-    Hub hub = new Hub(hubRequestDto.hubName(), hubRequestDto.address(), hubRequestDto.latitude(),
-        hubRequestDto.longitude(),
-        geometryFactory.createPoint(coordinate));
-
+    Coordinate coordinate = new Coordinate(hubRequest.longitude(), hubRequest.latitude());
+    Hub hub = new Hub(hubRequest, geometryFactory.createPoint(coordinate));
     hubRepository.save(hub);
   }
 
-  public HubResponseDto getHub(UUID hubId) {
+  public HubResponse getHub(UUID hubId) {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
@@ -54,22 +51,19 @@ public class HubService {
     }
 
     Hub hub = hubOptional.get();
-    return new HubResponseDto(hub.getHubName(), hub.getAddress(), hub.getLatitude(),
-        hub.getLatitude(), hub.getHubManagerId());
+    return HubResponse.from(hub);
   }
 
-  public Page<HubResponseDto> getHubs(int size, String keyword, Direction direction,
+  public Page<HubResponse> getHubs(int size, String keyword, Direction direction,
       Integer page
   ) {
     Pageable pageable = PageRequest.of(page, size, direction);
-
     return hubRepository.findByHubNameContaining(keyword, pageable)
-        .map(hub -> new HubResponseDto(hub.getHubName(), hub.getAddress(), hub.getLongitude(),
-            hub.getLatitude(), hub.getHubManagerId()));
+        .map(HubResponse::from);
   }
 
   @Transactional
-  public void updateHub(UUID hubId, HubRequestDto hubRequestDto) {
+  public void updateHub(UUID hubId, HubRequest hubRequest) {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
@@ -78,10 +72,8 @@ public class HubService {
 
     Hub fetchedHub = hubOptional.get();
 
-    Coordinate coordinate = new Coordinate(hubRequestDto.longitude(), hubRequestDto.latitude());
-    Hub hub = new Hub(hubRequestDto.hubName(), hubRequestDto.address(), hubRequestDto.latitude(),
-        hubRequestDto.longitude(),
-        geometryFactory.createPoint(coordinate));
+    Coordinate coordinate = new Coordinate(hubRequest.longitude(), hubRequest.latitude());
+    Hub hub = new Hub(hubRequest, geometryFactory.createPoint(coordinate));
 
     fetchedHub.update(hub);
   }

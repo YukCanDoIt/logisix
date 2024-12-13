@@ -1,5 +1,6 @@
 package com.sparta.core.entity;
 
+import com.sparta.core.dto.ProductRequest;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -14,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "p_products")
 @NoArgsConstructor
 @Getter
-public class Product {
+public class Product extends Base {
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -29,10 +30,10 @@ public class Product {
   @Column(name = "company_id")
   private UUID companyId;
 
-  public Product(String productName, UUID companyId, Long quantity) {
-    this.productName = productName;
-    this.companyId = companyId;
-    this.quantity = quantity;
+  public Product(ProductRequest productRequest) {
+    this.productName = productRequest.productName();
+    this.companyId = productRequest.companyId();
+    this.quantity = productRequest.quantity();
   }
 
   public void update(Product product) {

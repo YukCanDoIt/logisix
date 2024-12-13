@@ -1,6 +1,5 @@
 package com.sparta.core.repository;
 
-import com.sparta.core.dto.ProductResponseDto;
 import com.sparta.core.entity.Product;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -11,5 +10,5 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
   Product findByProductName(String productName);
 
-  Page<ProductResponseDto> findByProductNameContaining(String keyword, Pageable pageable);
+  Page<Product> findByProductNameContaining(String keyword, Pageable pageable);
 }

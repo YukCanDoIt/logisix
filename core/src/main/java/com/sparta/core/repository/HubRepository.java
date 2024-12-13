@@ -1,6 +1,5 @@
 package com.sparta.core.repository;
 
-import com.sparta.core.dto.HubResponseDto;
 import com.sparta.core.entity.Hub;
 import java.util.UUID;
 import org.springframework.data.domain.Page;

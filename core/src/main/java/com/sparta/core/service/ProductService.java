@@ -1,7 +1,7 @@
 package com.sparta.core.service;
 
-import com.sparta.core.dto.ProductRequestDto;
-import com.sparta.core.dto.ProductResponseDto;
+import com.sparta.core.dto.ProductRequest;
+import com.sparta.core.dto.ProductResponse;
 import com.sparta.core.entity.Product;
 import com.sparta.core.exception.ApiException;
 import com.sparta.core.exception.ErrorCode;
@@ -22,20 +22,19 @@ public class ProductService {
 
   private final ProductRepository productRepository;
 
-  public void createProduct(ProductRequestDto productRequestDto) {
+  public void createProduct(ProductRequest productRequest) {
     Optional<Product> productOptional = Optional.ofNullable(
-        productRepository.findByProductName(productRequestDto.productName()));
+        productRepository.findByProductName(productRequest.productName()));
 
     if (productOptional.isPresent()) {
       throw new ApiException(ErrorCode.DUPLICATE_VALUE);
     }
 
-    Product product = new Product(productRequestDto.productName(), productRequestDto.companyId(),
-        productRequestDto.quantity());
+    Product product = new Product(productRequest);
     productRepository.save(product);
   }
 
-  public ProductResponseDto getProduct(UUID productId) {
+  public ProductResponse getProduct(UUID productId) {
     Optional<Product> productOptional = productRepository.findById(productId);
 
     if (productOptional.isEmpty()) {
@@ -43,20 +42,18 @@ public class ProductService {
     }
 
     Product product = productOptional.get();
-    return new ProductResponseDto(product.getProductName(), product.getCompanyId(),
-        product.getQuantity());
+    return ProductResponse.from(product);
   }
 
-  public Page<ProductResponseDto> getProducts(int size, String keyword, Direction direction,
+  public Page<ProductResponse> getProducts(int size, String keyword, Direction direction,
       Integer page) {
     Pageable pageable = PageRequest.of(page, size, direction);
-    return productRepository.findByProductNameContaining(keyword, pageable).map(
-        product -> new ProductResponseDto(product.productName(), product.companyId(),
-            product.quantity()));
+    return productRepository.findByProductNameContaining(keyword, pageable)
+        .map(ProductResponse::from);
   }
 
   @Transactional
-  public void updateProduct(UUID productId, ProductRequestDto productRequestDto) {
+  public void updateProduct(UUID productId, ProductRequest productRequest) {
     Optional<Product> productOptional = productRepository.findById(productId);
 
     if (productOptional.isEmpty()) {
@@ -64,8 +61,8 @@ public class ProductService {
     }
 
     Product fetchedProduct = productOptional.get();
-    Product product = new Product(productRequestDto.productName(), productRequestDto.companyId(),
-        productRequestDto.quantity());
+    Product product = new Product(productRequest);
+
     fetchedProduct.update(product);
   }
 

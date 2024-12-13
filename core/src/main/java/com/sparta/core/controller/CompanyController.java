@@ -1,10 +1,7 @@
 package com.sparta.core.controller;
 
-import com.sparta.core.dto.CompanyRequestDto;
-import com.sparta.core.dto.CompanyResponseDto;
-import com.sparta.core.dto.HubRequestDto;
-import com.sparta.core.dto.HubResponseDto;
-import com.sparta.core.entity.Company;
+import com.sparta.core.dto.CompanyRequest;
+import com.sparta.core.dto.CompanyResponse;
 import com.sparta.core.response.ApiResponse;
 import com.sparta.core.service.CompanyService;
 import jakarta.validation.Valid;
@@ -24,22 +21,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/companies")
+@RequestMapping("/api/v1/core/companies")
 @RequiredArgsConstructor
 public class CompanyController {
 
   private final CompanyService companyService;
 
   @PostMapping
-  public ResponseEntity createCompany(@Valid @RequestBody CompanyRequestDto companyRequestDto) {
-    companyService.createCompany(companyRequestDto);
+  public ResponseEntity createCompany(@Valid @RequestBody CompanyRequest companyRequest) {
+    companyService.createCompany(companyRequest);
     return ResponseEntity.ok(ApiResponse.success());
   }
 
   @GetMapping("/{companyId}")
   public ResponseEntity getHub(@PathVariable UUID companyId) {
-    CompanyResponseDto companyResponseDto = companyService.getCompany(companyId);
-    return ResponseEntity.ok(ApiResponse.success(companyResponseDto));
+    CompanyResponse companyResponse = companyService.getCompany(companyId);
+    return ResponseEntity.ok(ApiResponse.success(companyResponse));
   }
 
   @GetMapping
@@ -50,7 +47,7 @@ public class CompanyController {
       @RequestParam(defaultValue = "DESC") Direction direction,
       @RequestParam Integer page
   ) {
-    Page<CompanyResponseDto> companyResponseDtoList = companyService.getCompanies(size, keyword,
+    Page<CompanyResponse> companyResponseDtoList = companyService.getCompanies(size, keyword,
         direction,
         page - 1);
     return ResponseEntity.ok(ApiResponse.success(companyResponseDtoList));
@@ -58,8 +55,8 @@ public class CompanyController {
 
   @PutMapping("/{companyId}")
   public ResponseEntity updateCompany(@PathVariable UUID companyId,
-      @Valid @RequestBody CompanyRequestDto companyRequestDto) {
-    companyService.updateCompany(companyId, companyRequestDto);
+      @Valid @RequestBody CompanyRequest companyRequest) {
+    companyService.updateCompany(companyId, companyRequest);
     return ResponseEntity.ok(ApiResponse.success());
   }
 

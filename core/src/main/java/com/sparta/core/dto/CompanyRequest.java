@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
-public record CompanyRequestDto(
+public record CompanyRequest(
     @NotBlank(message = "업체 이름을 입력해주세요.")
     @Size(max = 100, message = "업체 이름은 최대 100자까지 등록 가능합니다.")
     String companyName,

@@ -1,5 +1,6 @@
 package com.sparta.core.entity;
 
+import com.sparta.core.dto.HubRequest;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -39,12 +40,11 @@ public class Hub extends Base {
   @Column(name = "hub_manager_id")
   private Long hubManagerId;
 
-
-  public Hub(String hubName, String address, Long latitude, Long longitude, Point location) {
-    this.hubName = hubName;
-    this.address = address;
-    this.latitude = latitude;
-    this.longitude = longitude;
+  public Hub(HubRequest hubRequest, Point location) {
+    this.hubName = hubRequest.hubName();
+    this.latitude = hubRequest.latitude();
+    this.longitude = hubRequest.longitude();
+    this.address = hubRequest.address();
     this.location = location;
   }
 
@@ -54,6 +54,5 @@ public class Hub extends Base {
     this.latitude = hub.getLatitude();
     this.longitude = hub.getLongitude();
     this.location = hub.getLocation();
-    this.hubManagerId = hub.getHubManagerId();
   }
 }

@@ -1,7 +1,7 @@
 package com.sparta.core.controller;
 
-import com.sparta.core.dto.HubRequestDto;
-import com.sparta.core.dto.HubResponseDto;
+import com.sparta.core.dto.HubRequest;
+import com.sparta.core.dto.HubResponse;
 import com.sparta.core.response.ApiResponse;
 import com.sparta.core.service.HubService;
 import jakarta.validation.Valid;
@@ -21,22 +21,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/hubs")
+@RequestMapping("/api/v1/core/hubs")
 @RequiredArgsConstructor
 public class HubController {
 
   private final HubService hubService;
 
   @PostMapping
-  public ResponseEntity createHub(@Valid @RequestBody HubRequestDto hubRequestDto) {
-    hubService.createHub(hubRequestDto);
+  public ResponseEntity createHub(@Valid @RequestBody HubRequest hubRequest) {
+    hubService.createHub(hubRequest);
     return ResponseEntity.ok(ApiResponse.success());
   }
 
   @GetMapping("/{hubId}")
   public ResponseEntity getHub(@PathVariable UUID hubId) {
-    HubResponseDto hubResponseDto = hubService.getHub(hubId);
-    return ResponseEntity.ok(ApiResponse.success(hubResponseDto));
+    HubResponse hubResponse = hubService.getHub(hubId);
+    return ResponseEntity.ok(ApiResponse.success(hubResponse));
   }
 
   @GetMapping
@@ -47,15 +47,15 @@ public class HubController {
       @RequestParam(defaultValue = "DESC") Direction direction,
       @RequestParam Integer page
   ) {
-    Page<HubResponseDto> hubResponseDtoList = hubService.getHubs(size, keyword, direction,
+    Page<HubResponse> hubResponseDtoList = hubService.getHubs(size, keyword, direction,
         page - 1);
     return ResponseEntity.ok(ApiResponse.success(hubResponseDtoList));
   }
 
   @PutMapping("/{hubId}")
   public ResponseEntity updateHub(@PathVariable UUID hubId,
-      @Valid @RequestBody HubRequestDto hubRequestDto) {
-    hubService.updateHub(hubId, hubRequestDto);
+      @Valid @RequestBody HubRequest hubRequest) {
+    hubService.updateHub(hubId, hubRequest);
     return ResponseEntity.ok(ApiResponse.success());
   }
 

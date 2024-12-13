@@ -1,9 +1,7 @@
 package com.sparta.core.controller;
 
-import com.sparta.core.dto.CompanyRequestDto;
-import com.sparta.core.dto.CompanyResponseDto;
-import com.sparta.core.dto.ProductRequestDto;
-import com.sparta.core.dto.ProductResponseDto;
+import com.sparta.core.dto.ProductRequest;
+import com.sparta.core.dto.ProductResponse;
 import com.sparta.core.response.ApiResponse;
 import com.sparta.core.service.ProductService;
 import jakarta.validation.Valid;
@@ -23,22 +21,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping("/api/v1/core/products")
 @RequiredArgsConstructor
 public class ProductController {
 
   private final ProductService productService;
 
   @PostMapping
-  public ResponseEntity createProduct(@Valid @RequestBody ProductRequestDto productRequestDto) {
-    productService.createProduct(productRequestDto);
+  public ResponseEntity createProduct(@Valid @RequestBody ProductRequest productRequest) {
+    productService.createProduct(productRequest);
     return ResponseEntity.ok(ApiResponse.success());
   }
 
   @GetMapping("/{productId}")
   public ResponseEntity getProduct(@PathVariable UUID productId) {
-    ProductResponseDto productResponseDto = productService.getProduct(productId);
-    return ResponseEntity.ok(ApiResponse.success(productResponseDto));
+    ProductResponse productResponse = productService.getProduct(productId);
+    return ResponseEntity.ok(ApiResponse.success(productResponse));
   }
 
   @GetMapping
@@ -49,7 +47,7 @@ public class ProductController {
       @RequestParam(defaultValue = "DESC") Direction direction,
       @RequestParam Integer page
   ) {
-    Page<ProductResponseDto> productResponseDtoList = productService.getProducts(size, keyword,
+    Page<ProductResponse> productResponseDtoList = productService.getProducts(size, keyword,
         direction,
         page - 1);
     return ResponseEntity.ok(ApiResponse.success(productResponseDtoList));
@@ -57,8 +55,8 @@ public class ProductController {
 
   @PutMapping("/{productId}")
   public ResponseEntity updateProduct(@PathVariable UUID productId,
-      @Valid @RequestBody ProductRequestDto productRequestDto) {
-    productService.updateProduct(productId, productRequestDto);
+      @Valid @RequestBody ProductRequest productRequest) {
+    productService.updateProduct(productId, productRequest);
     return ResponseEntity.ok(ApiResponse.success());
   }
 
@@ -67,6 +65,4 @@ public class ProductController {
     productService.deleteProduct(productId);
     return ResponseEntity.ok(ApiResponse.success());
   }
-
-
 }
