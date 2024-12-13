@@ -1,1 +1,8 @@
 rootProject.name = 'gateway'
+
+
+include ':order', ':delivery', ':user', ':common', ':server', ':core', ':gateway', ':slack'
+
+// 각 모듈 경로 설정
+project(':user').projectDir = file('../user')       // user 모듈 경로 설정
+project(':common').projectDir = file('../common')   // common 모듈 경로 설정
