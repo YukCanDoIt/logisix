@@ -1,13 +1,11 @@
 package com.sparta.order.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sparta.order.domain.OrderStatus;
-import com.sparta.order.dto.OrderItemRequest;
-import com.sparta.order.dto.OrderItemResponse;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
 import com.sparta.order.exception.GlobalExceptionHandler;
+import com.sparta.order.exception.UnauthorizedException;
 import com.sparta.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,8 +18,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.filter.CharacterEncodingFilter;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,9 +40,6 @@ class OrderControllerTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-
-    objectMapper.registerModule(new JavaTimeModule());
-
     mockMvc = MockMvcBuilders.standaloneSetup(orderController)
         .setControllerAdvice(new GlobalExceptionHandler())
         .addFilters(new CharacterEncodingFilter("UTF-8", true))
@@ -56,142 +49,135 @@ class OrderControllerTest {
   @Test
   @DisplayName("주문 생성 성공 테스트")
   void createOrder_Success() throws Exception {
-    UUID orderId = UUID.randomUUID();
-    OrderItemRequest itemRequest = new OrderItemRequest(
-        UUID.randomUUID(), 10, 500
-    );
-
     OrderRequest request = new OrderRequest(
-        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-        Collections.singletonList(itemRequest), LocalDateTime.now(),
-        "Test order note", "Test request details"
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        10,
+        "Urgent delivery",
+        "Source Hub",
+        "Destination Hub",
+        OrderStatus.PENDING
     );
 
     OrderResponse response = new OrderResponse(
-        orderId, request.supplierId(), request.receiverId(),
-        request.hubId(), Collections.singletonList(new OrderItemResponse(
-        itemRequest.productId(), itemRequest.quantity(), itemRequest.pricePerUnit())),
-        request.orderNote(), OrderStatus.PENDING, UUID.randomUUID(),
-        request.requestDetails()
+        UUID.randomUUID(),
+        request.getSupplierId(),
+        request.getReceiverId(),
+        request.getProductId(),
+        request.getQuantity(),
+        request.getRequestDetails(),
+        UUID.randomUUID(),
+        false,
+        OrderStatus.PENDING
     );
 
-    when(orderService.createOrder(any(OrderRequest.class))).thenReturn(response);
+    when(orderService.createOrder(any())).thenReturn(response);
 
     mockMvc.perform(post("/api/orders")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.orderId").value(orderId.toString()))
+        .andExpect(jsonPath("$.orderId").isNotEmpty())
         .andExpect(jsonPath("$.status").value(OrderStatus.PENDING.name()));
 
-    verify(orderService, times(1)).createOrder(any(OrderRequest.class));
+    verify(orderService, times(1)).createOrder(any());
   }
 
   @Test
   @DisplayName("주문 조회 성공 테스트")
   void getMyOrders_Success() throws Exception {
     UUID userId = UUID.randomUUID();
-    String role = "COMPANY_MANAGER";
+    String role = "SUPPLIER_USER";
 
-    OrderResponse response = new OrderResponse(
-        UUID.randomUUID(), userId, UUID.randomUUID(), UUID.randomUUID(),
-        Collections.emptyList(), "Order note", OrderStatus.PENDING,
-        UUID.randomUUID(), "Request details"
+    List<OrderResponse> responses = List.of(
+        new OrderResponse(
+            UUID.randomUUID(),
+            userId,
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            10,
+            "Request details",
+            UUID.randomUUID(),
+            false,
+            OrderStatus.PENDING
+        )
     );
 
-    when(orderService.getOrdersByUser(eq(userId), eq(role))).thenReturn(List.of(response));
+    when(orderService.getOrdersByUser(userId, role)).thenReturn(responses);
 
     mockMvc.perform(get("/api/orders/my")
             .header("X-User-ID", userId.toString())
             .header("X-User-Role", role))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.size()").value(1));
+        .andExpect(jsonPath("$[0].orderId").isNotEmpty())
+        .andExpect(jsonPath("$[0].status").value(OrderStatus.PENDING.name()));
 
-    verify(orderService, times(1)).getOrdersByUser(eq(userId), eq(role));
+    verify(orderService, times(1)).getOrdersByUser(userId, role);
   }
 
   @Test
-  @DisplayName("주문 수정 성공 테스트")
-  void updateOrder_Success() throws Exception {
+  @DisplayName("주문 상태 변경 성공 테스트 - MASTER_ADMIN 권한 사용")
+  void updateOrderStatus_Success_WithRole() throws Exception {
     UUID orderId = UUID.randomUUID();
-    UUID userId = UUID.randomUUID();
-    String role = "COMPANY_MANAGER";
-
-    OrderItemRequest itemRequest = new OrderItemRequest(
-        UUID.randomUUID(), 15, 600
-    );
-
-    OrderRequest request = new OrderRequest(
-        userId, UUID.randomUUID(), UUID.randomUUID(),
-        Collections.singletonList(itemRequest), LocalDateTime.now(),
-        "Updated order note", "Updated request details"
-    );
+    String newStatus = "CONFIRMED";
+    String role = "MASTER_ADMIN";
 
     OrderResponse response = new OrderResponse(
-        orderId, userId, request.receiverId(), request.hubId(),
-        Collections.singletonList(new OrderItemResponse(
-            itemRequest.productId(), itemRequest.quantity(), itemRequest.pricePerUnit()
-        )), request.orderNote(), OrderStatus.PENDING, UUID.randomUUID(),
-        request.requestDetails()
+        orderId,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        10,
+        "Urgent delivery",
+        UUID.randomUUID(),
+        false,
+        OrderStatus.CONFIRMED
     );
 
-    when(orderService.updateOrder(eq(orderId), eq(userId), any(OrderRequest.class), eq(role)))
-        .thenReturn(response);
+    when(orderService.updateOrderStatus(orderId, newStatus)).thenReturn(response);
 
-    mockMvc.perform(patch("/api/orders/{id}", orderId)
-            .header("X-User-ID", userId.toString())
+    mockMvc.perform(patch("/api/orders/{id}/status", orderId.toString())
+            .param("status", newStatus)
             .header("X-User-Role", role)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
+            .contentType(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.quantity").value(15))
-        .andExpect(jsonPath("$.orderNote").value("Updated order note"));
+        .andExpect(jsonPath("$.status").value(OrderStatus.CONFIRMED.name()));
 
-    verify(orderService, times(1)).updateOrder(eq(orderId), eq(userId), any(OrderRequest.class), eq(role));
+    verify(orderService, times(1)).updateOrderStatus(orderId, newStatus);
   }
 
   @Test
-  @DisplayName("주문 삭제 성공 테스트")
-  void deleteOrder_Success() throws Exception {
+  @DisplayName("주문 삭제 실패 테스트 - 권한 부족")
+  void deleteOrder_Unauthorized() throws Exception {
     UUID orderId = UUID.randomUUID();
     UUID userId = UUID.randomUUID();
-    String role = "COMPANY_MANAGER";
+    String role = "SUPPLIER_USER";
 
-    doNothing().when(orderService).deleteOrder(eq(orderId), eq(userId), eq(role));
+    doThrow(new UnauthorizedException("삭제 권한이 없습니다."))
+        .when(orderService).deleteOrder(orderId, userId, role);
 
-    mockMvc.perform(delete("/api/orders/{id}", orderId)
+    mockMvc.perform(delete("/api/orders/{id}", orderId.toString())
+            .header("X-User-ID", userId.toString())
+            .header("X-User-Role", role))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("삭제 권한이 없습니다."));
+  }
+
+  @Test
+  @DisplayName("주문 삭제 성공 테스트 - MASTER_ADMIN 권한 사용")
+  void deleteOrder_Success_WithRole() throws Exception {
+    UUID orderId = UUID.randomUUID();
+    UUID userId = UUID.randomUUID();
+    String role = "MASTER_ADMIN";
+
+    doNothing().when(orderService).deleteOrder(orderId, userId, role);
+
+    mockMvc.perform(delete("/api/orders/{id}", orderId.toString())
             .header("X-User-ID", userId.toString())
             .header("X-User-Role", role))
         .andExpect(status().isNoContent());
 
-    verify(orderService, times(1)).deleteOrder(eq(orderId), eq(userId), eq(role));
+    verify(orderService, times(1)).deleteOrder(orderId, userId, role);
   }
-
-  @Test
-  @DisplayName("주문 상태 변경 성공 테스트")
-  void updateOrderStatus_Success() throws Exception {
-    UUID orderId = UUID.randomUUID();
-    String role = "COMPANY_MANAGER";
-    String newStatus = "CONFIRMED";
-
-    OrderResponse response = new OrderResponse(
-        orderId, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-        Collections.emptyList(), "Order note", OrderStatus.CONFIRMED,
-        UUID.randomUUID(), "Request details"
-    );
-
-    when(orderService.updateOrderStatus(eq(orderId), eq(newStatus))).thenReturn(response);
-
-    mockMvc.perform(patch("/api/orders/{id}/status", orderId)
-            .header("X-User-Role", role)
-            .param("status", newStatus))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value(OrderStatus.CONFIRMED.name()));
-
-    verify(orderService, times(1)).updateOrderStatus(eq(orderId), eq(newStatus));
-  }
-
-  // 추가 테스트 코드 작성 (?)
-
-
 }

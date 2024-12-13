@@ -1,15 +1,25 @@
 package com.sparta.order.domain;
 
-import jakarta.persistence.*;
-import lombok.*;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "p_order")
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -25,88 +35,35 @@ public class Order {
   @Column(name = "receiver_id", nullable = false)
   private UUID receiverId;
 
-  @Column(name = "hub_id", nullable = false)
-  private UUID hubId;
+  @Column(name = "product_id", nullable = false)
+  private UUID productId;
 
-  @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-  @JoinColumn(name = "order_id")
-  private List<OrderItem> orderItems;
+  @Column(name = "quantity", nullable = false)
+  private int quantity;
 
-  @Column(name = "expected_delivery_date")
-  private LocalDateTime expectedDeliveryDate;
+  @Column(name = "delivery_id", nullable = false)
+  private UUID deliveryId;
 
-  @Column(name = "order_note")
-  private String orderNote;
-
-  @Column(name = "request_details")  // 추가된 필드
-  private String requestDetails;  // 요청 세부사항
+  @Column(name = "request_details")
+  private String requestDetails;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false)
-  private OrderStatus status;
+  private OrderStatus status = OrderStatus.PENDING;
 
-  @Column(name = "is_delivery_started", nullable = false)
-  @Builder.Default
-  private boolean isDeliveryStarted = false; // 배송 시작 여부
+  @Builder.Default // 초기화 값 유지
+  @Column(name = "is_delete", nullable = false)
+  private boolean isDelete = false;
 
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
-  @Setter
   @Column(name = "updated_at")
   private LocalDateTime updatedAt;
 
-  @Setter
-  @Column(name = "delivery_id", nullable = true)
-  private UUID deliveryId;
-
-  @Column(name = "is_delete", nullable = false)
-  @Builder.Default
-  private boolean isDelete = false;
-
+  // 논리적 삭제 처리 메서드
   public void markAsDeleted() {
     this.isDelete = true;
-    this.updatedAt = LocalDateTime.now();
   }
 
-  public void setStatus(OrderStatus status) {
-    if (isDeliveryStarted) {
-      throw new IllegalStateException("배송이 시작된 이후에는 상태를 변경할 수 없습니다.");
-    }
-    this.status = status;
-    this.updatedAt = LocalDateTime.now();
-  }
-
-  public void startDelivery() {
-    this.isDeliveryStarted = true;
-  }
-
-  public void updateOrder(List<OrderItem> updatedItems, String orderNote, LocalDateTime expectedDeliveryDate) {
-    this.orderItems.clear();
-    this.orderItems.addAll(updatedItems);
-
-    if (orderNote != null) {
-      this.orderNote = orderNote;
-    }
-
-    if (expectedDeliveryDate != null) {
-      this.expectedDeliveryDate = expectedDeliveryDate;
-    }
-
-    this.updatedAt = LocalDateTime.now();
-  }
-
-  // isDeliveryStarted
-  public boolean getIsDeliveryStarted() {
-    return this.isDeliveryStarted;
-  }
-
-  // requestDetails와 orderNote
-  public String getOrderNote() {
-    return this.orderNote;
-  }
-
-  public String getRequestDetails() {
-    return this.requestDetails;
-  }
 }
