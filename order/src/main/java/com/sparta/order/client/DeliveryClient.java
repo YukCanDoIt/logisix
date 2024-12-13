@@ -1,13 +1,13 @@
 package com.sparta.order.client;
 
 import com.sparta.order.dto.OrderRequest;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.Map;
-import java.util.UUID;
 
 @Component
 public class DeliveryClient {
@@ -18,15 +18,18 @@ public class DeliveryClient {
     this.restTemplate = restTemplate;
   }
 
+  // 배송 생성 요청 메서드
   public UUID createDelivery(UUID orderId, OrderRequest orderRequest) {
     String deliveryServiceUrl = "http://delivery-service/api/deliveries";
 
     Map<String, Object> deliveryData = Map.of(
-        "hubId", orderRequest.hubId(),
-        "orderItems", orderRequest.orderItems(),
-        "expectedDeliveryDate", orderRequest.expectedDeliveryDate(),
-        "orderNote", orderRequest.orderNote(),
-        "orderId", orderId
+        "sourceHubId", orderRequest.getSourceHub(),
+        "companyAddress", "Company Address",
+        "recipient", "Recipient Name",
+        "recipientSlackAccount", "SlackAccount",
+        "dispatchDeadline", LocalDateTime.now().plusDays(1),
+        "orderId", orderId, // 저장된 orderId 전달
+        "companyId", orderRequest.getReceiverId()
     );
 
     ResponseEntity<UUID> response = restTemplate.postForEntity(deliveryServiceUrl, deliveryData, UUID.class);
