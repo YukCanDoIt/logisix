@@ -54,8 +54,7 @@ public class User extends BaseEntity {
     }
 
     // 회원 정보 수정
-    public void update(String username, String password, String slackAccount, String updatedBy) {
-        if(username!=null) this.username = username;
+    public void update(String password, String slackAccount, String updatedBy) {
         if(password!=null) this.password = password;
         if(slackAccount!=null) this.slackAccount = slackAccount;
         this.updateBase(updatedBy);

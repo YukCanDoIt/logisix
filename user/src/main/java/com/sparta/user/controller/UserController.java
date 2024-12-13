@@ -1,19 +1,14 @@
 package com.sparta.user.controller;
 
 import com.sparta.user.domain.User;
-import com.sparta.user.dto.ApiResponse;
-import com.sparta.user.dto.UserCreateRequest;
-import com.sparta.user.dto.UserLoginRequest;
-import com.sparta.user.dto.UserResponse;
+import com.sparta.user.dto.*;
 import com.sparta.user.service.UserService;
 import com.sparta.user.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.ClientErrorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 @RestController
@@ -50,5 +45,21 @@ public class UserController {
             String jsonResponse = "{\"message\": \"회원 정보가 일치하지 않습니다.\"}";
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(jsonResponse);
         }
+    }
+
+    @PatchMapping("/{user_id}")
+    public ResponseEntity<?> updateUser(
+            @PathVariable Long user_id,
+            @Valid @RequestBody UserUpdateRequest request,
+            HttpServletRequest httpRequest) {
+        try {
+            String updatedBy = (String) httpRequest.getAttribute("username");
+            UserResponse updatedUser = userService.updateUser(user_id, request, updatedBy);
+            return ResponseEntity.ok(ApiResponse.success(updatedUser));
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.badRequest());
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.internalServerError());
+            }
     }
 }
