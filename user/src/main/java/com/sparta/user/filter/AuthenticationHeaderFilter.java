@@ -1,5 +1,7 @@
 package com.sparta.user.filter;
 
+import com.sparta.user.exception.LogisixException;
+import com.sparta.user.exception.ErrorCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,12 +9,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 게이트웨이를 통해 오는 요청인지 확인하고 사용자 정보를 처리하는 필터
@@ -37,17 +37,12 @@ public class AuthenticationHeaderFilter extends OncePerRequestFilter {
         // 게이트웨이 서명 확인
         String receivedSignature = request.getHeader("X-Gateway-Signature");
         log.info("도착한 게이트웨이 서명: {}", receivedSignature);
-        if (!gatewaySignature.equals(receivedSignature)) {
-            log.error("게이트웨이 서명이 올바르지 않거나 없습니다.");
-
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            response.getWriter().write("{\"message\": \"잘못된 접근입니다.\"}");
-            return;
+        if (receivedSignature == null || !gatewaySignature.equals(receivedSignature)) {
+            log.error("유효하지 않은 게이트웨이 서명입니다.");
+            throw new LogisixException(ErrorCode.INVALID_SIGNATURE);
         }
 
-        // 인증이 필요 없는 경로 설정
+        // 인증 필요 없는 경로 설정
         if (path.startsWith("/users/sign-up") || path.startsWith("/users/sign-in")) {
             filterChain.doFilter(request, response);
             return;
@@ -60,10 +55,17 @@ public class AuthenticationHeaderFilter extends OncePerRequestFilter {
             String role = request.getHeader("X-User-Role");
 
             if (userIdHeader == null || username == null || role == null) {
-                throw new IllegalArgumentException("헤더에 사용자 정보가 없습니다.");
+                log.error("헤더에 사용자 정보가 없습니다.");
+                throw new LogisixException(ErrorCode.MISSING_USER_INFORMATION);
             }
 
-            Long userId = Long.parseLong(userIdHeader);
+            Long userId;
+            try {
+                userId = Long.parseLong(userIdHeader);
+            } catch (NumberFormatException e) {
+                log.error("유효하지 않은 사용자 ID입니다.", e);
+                throw new LogisixException(ErrorCode.INVALID_USER_ID);
+            }
 
             // HttpServletRequest에 사용자 정보 추가
             request.setAttribute("userId", userId);
@@ -72,13 +74,8 @@ public class AuthenticationHeaderFilter extends OncePerRequestFilter {
 
             log.info("사용자 정보 설정: userId={}, username={}, role={}", userId, username, role);
 
-        } catch (IllegalArgumentException e) {
-            log.error("헤더에서 사용자 정보를 처리하는 데 실패했습니다.", e);
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            response.getWriter().write("{\"message\": \"유효하지 않은 사용자 정보입니다.\"}");
-            return;
+        } catch (LogisixException e) {
+            throw e;
         }
 
         // 다음 필터 또는 서블릿으로 요청 전달
