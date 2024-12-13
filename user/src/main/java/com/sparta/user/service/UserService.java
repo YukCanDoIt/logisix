@@ -37,7 +37,7 @@ public class UserService {
         User newUser = User.create(
                 request.username(),
                 passwordEncoder.encode(request.password()),
-                request.slack_id(),
+                request.slack_account(),
                 request.username()
         );
         userRepository.save(newUser);
@@ -59,13 +59,34 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new LogisixException(ErrorCode.USER_NOT_FOUND));
 
+        // 정보 수정 계정과 현재 계정 일치 여부 검증
+        if (!user.getUsername().equals(updatedBy)) {
+            throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
         // 수정된 패스워드 암호화
         String encodedPassword = request.password() != null
                 ? passwordEncoder.encode(request.password())
                 : null;
 
-        user.update(encodedPassword, request.slackAccount(), updatedBy);
+        user.update(encodedPassword, request.slack_account(), updatedBy);
         user.updateBase(updatedBy);
         return UserResponse.from(user);
     }
+
+    // 회원 삭제
+    @Transactional
+    public void deleteUser(Long userId, String deletedBy) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new LogisixException(ErrorCode.USER_NOT_FOUND));
+
+        // 삭제 계정과 현재 계정 일치 여부 검증
+        if (!user.getUsername().equals(deletedBy)) {
+            throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        user.deleteBase(deletedBy);
+        userRepository.save(user);
+    }
+
 }

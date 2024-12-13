@@ -17,6 +17,6 @@ public record UserCreateRequest(
         String password,
 
         @NotBlank(message = "슬랙ID를 입력해주세요.")
-        String slack_id
+        String slack_account
 ) {
 }
