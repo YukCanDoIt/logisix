@@ -1,11 +1,11 @@
-package com.sparta.order.config;
+package com.sparta.slack.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-public class RestTemplateConfig {
+public class SlackConfig {
 
   @Bean
   public RestTemplate restTemplate() {
