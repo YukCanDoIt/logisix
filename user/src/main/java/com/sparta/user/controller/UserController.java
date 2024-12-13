@@ -28,7 +28,7 @@ public class UserController {
         this.jwtUtil = jwtUtil;
     }
 
-    @PostMapping("/signUp")
+    @PostMapping("/sign-up")
     public ResponseEntity<ApiResponse<UserResponse>> registerUser(@Valid @RequestBody UserCreateRequest request) {
         try {
             UserResponse newUser = userService.registerUser(request);
@@ -40,7 +40,7 @@ public class UserController {
         }
     }
 
-    @PostMapping("/signIn")
+    @PostMapping("/sign-in")
     public ResponseEntity<?> loginUser(@Valid @RequestBody UserLoginRequest request) {
         User user = userService.validateUser(request.username(), request.password());
         if (user != null) {
