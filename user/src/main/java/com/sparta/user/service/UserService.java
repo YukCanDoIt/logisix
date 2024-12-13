@@ -7,12 +7,9 @@ import com.sparta.user.dto.UserUpdateRequest;
 import com.sparta.user.exception.LogisixException;
 import com.sparta.user.exception.ErrorCode;
 import com.sparta.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Map;
 
 @Service
 public class UserService {
