@@ -16,7 +16,7 @@ import java.util.UUID;
 @Builder
 @Getter
 @Setter
-public class Deliveries extends BaseEntity {
+public class Delivery extends BaseEntity {
 
     @Id
     @GeneratedValue
@@ -54,9 +54,9 @@ public class Deliveries extends BaseEntity {
     private UUID companyId;
 
     @OneToMany(mappedBy = "delivery", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<DeliveryRecords> deliveryRecords = new ArrayList<>();
+    private List<DeliveryRecord> deliveryRecords = new ArrayList<>();
 
-    public static Deliveries create(
+    public static Delivery create(
             UUID orderId,
             UUID sourceHubId,
             UUID companyId,
@@ -64,7 +64,7 @@ public class Deliveries extends BaseEntity {
             String recipient,
             String recipientSlackAccount
     ) {
-        return Deliveries.builder()
+        return Delivery.builder()
                 .orderId(orderId)
                 .sourceHubId(sourceHubId)
                 .companyId(companyId)

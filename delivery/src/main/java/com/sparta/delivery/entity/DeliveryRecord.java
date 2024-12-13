@@ -18,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Getter
-public class DeliveryRecords extends BaseEntity {
+public class DeliveryRecord extends BaseEntity {
 
     @Id
     @UuidGenerator
@@ -53,21 +53,21 @@ public class DeliveryRecords extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "delivery_id", nullable = false)
-    private Deliveries delivery;
+    private Delivery delivery;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deliverer_id")
-    private Deliverers deliverer;
+    private Deliverer deliverer;
 
-    public static DeliveryRecords create(
+    public static DeliveryRecord create(
             UUID departures,
             UUID arrival,
             Integer sequence,
             Duration estimatedTime,
             BigDecimal estimatedDist,
-            Deliveries delivery
+            Delivery delivery
     ) {
-        return DeliveryRecords.builder()
+        return DeliveryRecord.builder()
                 .departures(departures)
                 .arrival(arrival)
                 .status(DeliveryRecordsStatusEnum.WAIT)
@@ -78,7 +78,7 @@ public class DeliveryRecords extends BaseEntity {
                 .build();
     }
 
-    public void changeDeliverer(Deliverers deliverer) {
+    public void changeDeliverer(Deliverer deliverer) {
         this.deliverer = deliverer;
     }
 

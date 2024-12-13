@@ -5,7 +5,7 @@ import com.sparta.delivery.dto.GetDelivererResponse;
 import com.sparta.delivery.dto.RegisterDelivererRequest;
 import com.sparta.delivery.dto.UpdateDelivererRequest;
 import com.sparta.delivery.entity.DelivererStatusEnum;
-import com.sparta.delivery.entity.Deliverers;
+import com.sparta.delivery.entity.Deliverer;
 import com.sparta.delivery.repository.DeliverersJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ public class DelivererService {
             return new ApiResponse<>(400, "이미 등록된 배송 담당자입니다", null);
         }
 
-        Deliverers deliverer = Deliverers.create(
+        Deliverer deliverer = Deliverer.create(
                 request.delivererId(),
                 request.hubId(),
                 request.type()
@@ -40,7 +40,7 @@ public class DelivererService {
     public ApiResponse<GetDelivererResponse> getDeliverer(Long delivererId) {
         // 사용자 권한 및 유효성 체크
 
-        ApiResponse<Deliverers> response = findDelivererById(delivererId);
+        ApiResponse<Deliverer> response = findDelivererById(delivererId);
         if (response.data() == null) {
             return new ApiResponse<>(response.status(), response.message(), null);
         }
@@ -52,12 +52,12 @@ public class DelivererService {
     public ApiResponse<GetDelivererResponse> updateDeliverer(Long delivererId, UpdateDelivererRequest request) {
         // 사용자 권한 및 유효성 체크
 
-        ApiResponse<Deliverers> response = findDelivererById(delivererId);
+        ApiResponse<Deliverer> response = findDelivererById(delivererId);
         if (response.data() == null) {
             return new ApiResponse<>(response.status(), response.message(), null);
         }
 
-        Deliverers deliverer = response.data();
+        Deliverer deliverer = response.data();
         deliverer.update(request.hubId(), request.type());
         deliverersJpaRepository.save(deliverer);
         return new ApiResponse<>(200, "배송 담당자 수정 완료", GetDelivererResponse.from(deliverer));
@@ -67,12 +67,12 @@ public class DelivererService {
     public ApiResponse<Void> deleteDeliverer(Long delivererId) {
         // 사용자 권한 및 유효성 체크
 
-        ApiResponse<Deliverers> response = findDelivererById(delivererId);
+        ApiResponse<Deliverer> response = findDelivererById(delivererId);
         if (response.data() == null) {
             return new ApiResponse<>(response.status(), response.message(), null);
         }
 
-        Deliverers deliverer = response.data();
+        Deliverer deliverer = response.data();
         // 배송 진행 중일 경우
         if (deliverer.getStatus() == DelivererStatusEnum.MOVING) {
             return new ApiResponse<>(400, "배송 중인 배송 담당자는 삭제할 수 없습니다", null);
@@ -83,7 +83,7 @@ public class DelivererService {
     }
 
     // 배송 담당자 조회
-    private ApiResponse<Deliverers> findDelivererById(Long delivererId) {
+    private ApiResponse<Deliverer> findDelivererById(Long delivererId) {
         return deliverersJpaRepository.findByDelivererId(delivererId)
                 .map(deliverer -> new ApiResponse<>(200, "배송 담당자 조회 성공", deliverer))
                 .orElseGet(() -> new ApiResponse<>(400, "해당하는 배송 담당자가 없습니다", null));
