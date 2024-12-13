@@ -47,19 +47,22 @@ public class UserController {
         }
     }
 
-    @PatchMapping("/{user_id}")
+    @PatchMapping("/update")
     public ResponseEntity<?> updateUser(
-            @PathVariable Long user_id,
             @Valid @RequestBody UserUpdateRequest request,
             HttpServletRequest httpRequest) {
         try {
-            String updatedBy = (String) httpRequest.getAttribute("username");
-            UserResponse updatedUser = userService.updateUser(user_id, request, updatedBy);
+            // 헤더에서 사용자 정보 추출
+            Long userId = Long.parseLong(httpRequest.getHeader("X-User-Id"));
+            String updatedBy = httpRequest.getHeader("X-User-Name");
+
+            // 사용자 정보 업데이트
+            UserResponse updatedUser = userService.updateUser(userId, request, updatedBy);
             return ResponseEntity.ok(ApiResponse.success(updatedUser));
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.badRequest());
-            } catch (Exception e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.internalServerError());
-            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.badRequest());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.internalServerError());
+        }
     }
 }

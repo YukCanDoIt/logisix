@@ -64,5 +64,4 @@ public class UserService {
         user.updateBase(updatedBy);
         return UserResponse.from(user);
     }
-
 }
