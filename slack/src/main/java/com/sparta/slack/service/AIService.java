@@ -15,7 +15,7 @@ public class AIService {
 
   // AI에 발송 시한 계산 요청
   public String calculateFinalSendDeadline(String orderDetails) {
-    String aiApiUrl = "https://your-ai-api-url.com/calculate-deadline";  // AI API URL
+    String aiApiUrl = "https://api.gemini.com/v1beta/models";  // AI API URL
 
     // 요청에 필요한 데이터 전송 (예: 상품, 수량, 요청 사항 등)
     String response = restTemplate.postForObject(aiApiUrl, orderDetails, String.class);

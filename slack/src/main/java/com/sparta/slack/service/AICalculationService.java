@@ -13,13 +13,12 @@ public class AICalculationService {
   private final RestTemplate restTemplate;
 
   @Value("${ai.api.url}")
-  private String aiApiUrl; // Gemini AI API URL
+  private String aiApiUrl;
 
   public AICalculationService(RestTemplate restTemplate) {
     this.restTemplate = restTemplate;
   }
 
-  // 발송 시한 계산 요청
   public String calculateDeadline(OrderRequest orderRequest) {
     Map<String, Object> requestPayload = Map.of(
         "orderItems", orderRequest.getOrderItems(),
@@ -31,9 +30,7 @@ public class AICalculationService {
         "requestDetails", orderRequest.requestDetails()
     );
 
-    // Gemini AI API 호출
     String response = restTemplate.postForObject(aiApiUrl, requestPayload, String.class);
-
     return response != null ? response : "AI 처리 실패";
   }
 }
