@@ -1,14 +1,15 @@
 package com.sparta.user.service;
 
-import com.sparta.user.domain.Role;
-import com.sparta.user.dto.UserCreateRequest;
-import com.sparta.user.dto.UserGrantRoleRequest;
-import com.sparta.user.dto.UserResponse;
 import com.sparta.user.domain.User;
-import com.sparta.user.dto.UserUpdateRequest;
+import com.sparta.user.domain.Role;
+import com.sparta.user.dto.*;
 import com.sparta.user.exception.LogisixException;
 import com.sparta.user.exception.ErrorCode;
 import com.sparta.user.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +56,13 @@ public class UserService {
         return user;
     }
 
+    // 회원 정보 목록 조회 (MASTER 전용)
+    @Transactional(readOnly = true)
+    public PageResponse<UserListResponse> listUsers(Pageable pageable) {
+        Page<User> users = userRepository.findAllByIsDeletedFalse(pageable);
+        return PageResponse.of(users.map(UserListResponse::from));
+    }
+
     // 회원 정보 수정
     @Transactional
     public UserResponse updateUser(Long userId, UserUpdateRequest request, String updatedBy) {
@@ -91,7 +99,7 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // 회원 권한 부여
+    // 회원 권한 부여 (MASTER 전용)
     @Transactional
     public void grantRole(UserGrantRoleRequest request, String updatedBy) {
         long userId;
