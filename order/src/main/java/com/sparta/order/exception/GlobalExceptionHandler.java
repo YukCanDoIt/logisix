@@ -24,4 +24,5 @@ public class GlobalExceptionHandler {
         .contentType(MediaType.APPLICATION_JSON) // Content-Type 명시
         .body("{\"message\": \"서버 에러가 발생했습니다: " + ex.getMessage() + "\"}");
   }
+
 }
