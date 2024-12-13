@@ -28,7 +28,8 @@ public enum ErrorCode {
     // 요청 처리 에러
     MISSING_REQUIRED_HEADER(HttpStatus.BAD_REQUEST, "필수 헤더가 누락되었습니다."),
     INVALID_REQUEST_PATH(HttpStatus.BAD_REQUEST, "유효하지 않은 요청 경로입니다."),
-    INVALID_REQUEST_PARAMETER(HttpStatus.BAD_REQUEST, "유효하지 않은 요청 파라미터입니다.");
+    INVALID_REQUEST_PARAMETER(HttpStatus.BAD_REQUEST, "유효하지 않은 요청 파라미터입니다."),
+    INVALID_REQUEST_DATA(HttpStatus.BAD_REQUEST, "잘못된 정보를 요청하였습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

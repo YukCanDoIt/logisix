@@ -97,7 +97,7 @@ public class UserController {
         }
     }
 
-    @PostMapping("/grant_role")
+    @PostMapping("/grant-role")
     public ResponseEntity<?> grantRole(
             @Valid @RequestBody UserGrantRoleRequest request,
             HttpServletRequest httpRequest) {

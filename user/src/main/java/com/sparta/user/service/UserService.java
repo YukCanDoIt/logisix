@@ -108,7 +108,7 @@ public class UserService {
         try {
             newRole = Role.valueOf(request.role());
         } catch (IllegalArgumentException e) {
-            throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new LogisixException(ErrorCode.INVALID_REQUEST_DATA);
         }
 
         user.grantRole(newRole, updatedBy);
