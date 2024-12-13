@@ -7,6 +7,9 @@ WORKDIR /app
 # 애플리케이션 JAR 복사
 COPY build/libs/order-0.0.1-SNAPSHOT.jar app.jar
 
+# 컨테이너 포트 노출
+EXPOSE 19094
+
 # 환경 변수 설정
 ENV JAVA_OPTS="-Xms256m -Xmx512m"
 
