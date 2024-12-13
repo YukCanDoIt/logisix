@@ -13,6 +13,8 @@ services:
       - "19091:19091"
     depends_on:
       - eureka-server
+    networks:
+      - app-network
 
   user-service:
     image: user-service:latest
@@ -24,6 +26,7 @@ services:
       - eureka-server
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/userdb
+
   user-db:
     image: postgres:13
     environment:
@@ -49,6 +52,7 @@ services:
       REDIS_HOST: core-redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: systempass
+
   core-db:
     image: postgres:13
     environment:
@@ -59,6 +63,7 @@ services:
       - "5433:5433"
     networks:
       - app-network
+
   core-redis:
     image: redis:latest
     command: redis-server --requirepass systempass
@@ -80,6 +85,7 @@ services:
       REDIS_HOST: delivery-redis
       REDIS_PORT: 6380
       REDIS_PASSWORD: systempass
+
   delivery-db:
     image: postgres:13
     environment:
@@ -88,8 +94,6 @@ services:
       POSTGRES_PASSWORD: systempass
     ports:
       - "5437:5432"
-    networks:
-      - app-network
     networks:
       - app-network
 
@@ -103,6 +107,7 @@ services:
       - eureka-server
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://slack-db:5438/slackdb
+
   slack-db:
     image: postgres:13
     environment:
@@ -111,6 +116,33 @@ services:
       POSTGRES_PASSWORD: systempass
     ports:
       - "5438:5438"
+    networks:
+      - app-network
+
+  order:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "19094:19094"
+    networks:
+      - app-network
+    depends_on:
+      - eureka-server
+      - order-db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5439/orderdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: systempass
+
+  order-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: systempass
+    ports:
+      - "5439:5432"
     networks:
       - app-network
 
