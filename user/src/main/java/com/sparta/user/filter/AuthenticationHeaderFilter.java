@@ -47,7 +47,7 @@ public class AuthenticationHeaderFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 인증이 필요 없는 경로는 필터를 통과시킴
+        // 인증이 필요 없는 경로 설정
         if (path.startsWith("/users/sign-up") || path.startsWith("/users/sign-in")) {
             filterChain.doFilter(request, response);
             return;

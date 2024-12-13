@@ -4,8 +4,9 @@ import com.sparta.user.domain.User;
 import com.sparta.user.dto.*;
 import com.sparta.user.service.UserService;
 import com.sparta.user.util.JwtUtil;
+import com.sparta.user.exception.LogisixException;
+import com.sparta.user.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.ws.rs.ClientErrorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,27 +24,34 @@ public class UserController {
         this.jwtUtil = jwtUtil;
     }
 
+    // 회원가입
     @PostMapping("/sign-up")
     public ResponseEntity<ApiResponse<UserResponse>> registerUser(@Valid @RequestBody UserCreateRequest request) {
         try {
             UserResponse newUser = userService.registerUser(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(newUser));
-        } catch (ClientErrorException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.badRequest());
+        } catch (IllegalArgumentException e) {
+            throw new LogisixException(ErrorCode.DUPLICATE_USERNAME);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.internalServerError());
+            throw new LogisixException(ErrorCode.API_CALL_FAILED);
         }
     }
 
+    // 로그인
     @PostMapping("/sign-in")
     public ResponseEntity<?> loginUser(@Valid @RequestBody UserLoginRequest request) {
-        User user = userService.validateUser(request.username(), request.password());
-        if (user != null) {
-            String token = jwtUtil.generateToken(user.getUserId(), user.getUsername(), user.getRole());
-            return ResponseEntity.ok(ApiResponse.success(token));
-        } else {
-            String jsonResponse = "{\"message\": \"회원 정보가 일치하지 않습니다.\"}";
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(jsonResponse);
+        try {
+            User user = userService.validateUser(request.username(), request.password());
+            if (user != null) {
+                String token = jwtUtil.generateToken(user.getUserId(), user.getUsername(), user.getRole());
+                return ResponseEntity.ok(ApiResponse.success(token));
+            } else {
+                throw new LogisixException(ErrorCode.INVALID_PASSWORD);
+            }
+        } catch (LogisixException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new LogisixException(ErrorCode.API_CALL_FAILED);
         }
     }
 
@@ -59,10 +67,12 @@ public class UserController {
             // 사용자 정보 업데이트
             UserResponse updatedUser = userService.updateUser(userId, request, updatedBy);
             return ResponseEntity.ok(ApiResponse.success(updatedUser));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.badRequest());
+        } catch (NumberFormatException e) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        } catch (LogisixException e) {
+            throw e;
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.internalServerError());
+            throw new LogisixException(ErrorCode.API_CALL_FAILED);
         }
     }
 }
