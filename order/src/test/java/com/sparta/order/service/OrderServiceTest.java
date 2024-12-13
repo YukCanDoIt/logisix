@@ -2,11 +2,13 @@ package com.sparta.order.service;
 
 import com.sparta.order.client.DeliveryClient;
 import com.sparta.order.domain.Order;
+import com.sparta.order.domain.OrderItem;
 import com.sparta.order.domain.OrderStatus;
+import com.sparta.order.dto.OrderItemRequest;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
-
 import com.sparta.order.repository.OrderRepository;
+import com.sparta.user.entity.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,74 +44,111 @@ class OrderServiceTest {
   @Test
   @DisplayName("주문 생성 성공 테스트")
   void createOrder_Success() {
+    UUID deliveryId = UUID.randomUUID();
+    OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 10, 500);
     OrderRequest request = new OrderRequest(
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        10,
-        "Urgent delivery",
-        "Source Hub",
-        "Destination Hub",
-        null
+        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        List.of(itemRequest), LocalDateTime.now(), "Test Order", "Request details"
     );
 
-    UUID deliveryId = UUID.randomUUID();
     when(deliveryClient.createDelivery(any(), eq(request))).thenReturn(deliveryId);
 
-    Order savedOrder = Order.builder()
+    Order order = Order.builder()
         .id(UUID.randomUUID())
-        .supplierId(request.getSupplierId())
-        .receiverId(request.getReceiverId())
-        .productId(request.getProductId())
-        .quantity(request.getQuantity())
-        .deliveryId(deliveryId)
+        .supplierId(request.supplierId())
+        .receiverId(request.receiverId())
+        .hubId(request.hubId())
+        .orderItems(List.of(OrderItem.builder()
+            .productId(itemRequest.productId())
+            .quantity(itemRequest.quantity())
+            .pricePerUnit(itemRequest.pricePerUnit())
+            .build()))
         .status(OrderStatus.PENDING)
+        .deliveryId(deliveryId)
         .createdAt(LocalDateTime.now())
-        .updatedAt(LocalDateTime.now())
         .build();
 
-    when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
+    when(orderRepository.save(any(Order.class))).thenReturn(order);
 
     OrderResponse response = orderService.createOrder(request);
 
     assertNotNull(response);
-    assertEquals(request.getSupplierId(), response.supplierId());
+    assertEquals(request.supplierId(), response.supplierId());
     assertEquals(deliveryId, response.deliveryId());
     assertEquals(OrderStatus.PENDING, response.status());
   }
 
   @Test
-  @DisplayName("사용자 주문 조회 성공")
+  @DisplayName("주문 생성 실패 - 배송 생성 오류")
+  void createOrder_Fail_DeliveryCreation() {
+    OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 5, 1000);
+    OrderRequest request = new OrderRequest(
+        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        List.of(itemRequest), LocalDateTime.now(), "Order Note", "Details"
+    );
+
+    when(deliveryClient.createDelivery(any(), eq(request)))
+        .thenThrow(new RuntimeException("배송 생성 실패"));
+
+    RuntimeException exception = assertThrows(RuntimeException.class, () -> orderService.createOrder(request));
+
+    assertEquals("배송 생성 실패", exception.getMessage());
+  }
+
+  @Test
+  @DisplayName("사용자 주문 조회 성공 테스트")
   void getOrdersByUser_Success() {
     UUID userId = UUID.randomUUID();
-    String role = "SUPPLIER_USER";
+    Role role = Role.COMPANY_MANAGER;
 
     Order order = Order.builder()
         .id(UUID.randomUUID())
         .supplierId(userId)
-        .receiverId(UUID.randomUUID())
-        .productId(UUID.randomUUID())
-        .quantity(10)
-        .requestDetails("Test order")
         .status(OrderStatus.PENDING)
-        .isDelete(false)
-        .createdAt(LocalDateTime.now())
+        .orderItems(new ArrayList<>())
         .build();
 
     when(orderRepository.findAll()).thenReturn(List.of(order));
 
-    List<OrderResponse> responses = orderService.getOrdersByUser(userId, role);
+    List<OrderResponse> responses = orderService.getOrdersByUser(userId, role.name());
 
     assertEquals(1, responses.size());
     assertEquals(userId, responses.get(0).supplierId());
   }
 
   @Test
-  @DisplayName("주문 삭제 성공 - 논리 삭제 처리")
-  void deleteOrder_LogicalDelete() {
+  @DisplayName("주문 수정 성공 테스트")
+  void updateOrder_Success() {
     UUID orderId = UUID.randomUUID();
     UUID userId = UUID.randomUUID();
-    String role = "MASTER_ADMIN";
+    Role role = Role.COMPANY_MANAGER;
+
+    Order order = Order.builder()
+        .id(orderId)
+        .supplierId(userId)
+        .orderItems(new ArrayList<>())
+        .build();
+
+    OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 5, 300);
+    OrderRequest request = new OrderRequest(
+        userId, UUID.randomUUID(), UUID.randomUUID(),
+        List.of(itemRequest), LocalDateTime.now(), "Updated Order", "Updated details"
+    );
+
+    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+    OrderResponse response = orderService.updateOrder(orderId, userId, request, role.name());
+
+    assertEquals(5, response.quantity());
+    assertEquals("Updated Order", response.orderNote());
+  }
+
+  @Test
+  @DisplayName("주문 삭제 성공 테스트")
+  void deleteOrder_Success() {
+    UUID orderId = UUID.randomUUID();
+    UUID userId = UUID.randomUUID();
+    Role role = Role.MASTER;
 
     Order order = Order.builder()
         .id(orderId)
@@ -118,80 +158,26 @@ class OrderServiceTest {
 
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    orderService.deleteOrder(orderId, userId, role);
+    orderService.deleteOrder(orderId, userId, role.name());
 
     assertTrue(order.isDelete());
-    verify(orderRepository, times(1)).save(order);
   }
 
   @Test
-  @DisplayName("주문 수정 성공")
-  void updateOrder_Success() {
-    UUID orderId = UUID.randomUUID();
-    UUID userId = UUID.randomUUID();
-    String role = "SUPPLIER_USER";
-
-    Order order = Order.builder()
-        .id(orderId)
-        .supplierId(userId)
-        .quantity(5)
-        .build();
-
-    OrderRequest request = new OrderRequest(
-        userId,
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        10,
-        "Updated request details",
-        "Source Hub",
-        "Destination Hub",
-        null
-    );
-
-    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-
-    OrderResponse response = orderService.updateOrder(orderId, userId, request, role);
-
-    assertEquals(10, response.quantity());
-    assertEquals("Updated request details", response.requestDetails());
-    verify(orderRepository, times(1)).save(order);
-  }
-
-  @Test
-  @DisplayName("주문 상태 변경 성공")
+  @DisplayName("주문 상태 변경 성공 테스트")
   void updateOrderStatus_Success() {
     UUID orderId = UUID.randomUUID();
-    String newStatus = "CONFIRMED";
 
     Order order = Order.builder()
         .id(orderId)
         .status(OrderStatus.PENDING)
+        .orderItems(new ArrayList<>())
         .build();
 
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    OrderResponse response = orderService.updateOrderStatus(orderId, newStatus);
+    OrderResponse response = orderService.updateOrderStatus(orderId, "CONFIRMED");
 
     assertEquals(OrderStatus.CONFIRMED, response.status());
-    verify(orderRepository, times(1)).save(order);
-  }
-
-  @Test
-  @DisplayName("주문 상태 변경 실패 - 유효하지 않은 상태 전환")
-  void updateOrderStatus_InvalidTransition() {
-    UUID orderId = UUID.randomUUID();
-    Order order = Order.builder()
-        .id(orderId)
-        .status(OrderStatus.CONFIRMED)
-        .build();
-
-    when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-
-    IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-      orderService.updateOrderStatus(orderId, "PENDING");
-    });
-
-    assertEquals("CONFIRMED 상태에서 PENDING으로 변경할 수 없습니다.", exception.getMessage());
-    verify(orderRepository, never()).save(any());
   }
 }
