@@ -76,7 +76,7 @@ public class UserService {
     public UserListResponse getUserById(Long userId, String requesterRole, Long requesterId) throws LogisixException {
         QUser qUser = QUser.user;
 
-        BooleanExpression condition = qUser.userId.eq(userId).and(qUser.isDeleted.isFalse());
+        BooleanExpression condition = qUser.userId.eq(userId).and(isNotDeleted(qUser));
 
         if (!Role.MASTER.name().equals(requesterRole) && !userId.equals(requesterId)) {
             throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
@@ -99,7 +99,7 @@ public class UserService {
     public PageResponse<UserListResponse> listUsers(String username, String slackAccount, String requesterRole, Long requesterId, Pageable pageable) throws LogisixException {
         QUser qUser = QUser.user;
 
-        BooleanExpression condition = qUser.isDeleted.isFalse();
+        BooleanExpression condition = isNotDeleted(qUser);
 
         if (username != null && !username.isBlank()) {
             condition = condition.and(qUser.username.containsIgnoreCase(username));
@@ -108,12 +108,10 @@ public class UserService {
             condition = condition.and(qUser.slackAccount.containsIgnoreCase(slackAccount));
         }
 
-        // 마스터 외 권한은 본인만 조회
         if (!Role.MASTER.name().equals(requesterRole)) {
             condition = condition.and(qUser.userId.eq(requesterId));
         }
 
-        // 정렬 필드 매핑
         Map<String, ComparableExpressionBase<?>> fieldMap = new HashMap<>();
         fieldMap.put("createdAt", qUser.createdAt);
         fieldMap.put("updatedAt", qUser.updatedAt);
@@ -145,16 +143,23 @@ public class UserService {
 
     // 회원 정보 수정
     @Transactional
-    public UserResponse updateUser(Long userId, UserUpdateRequest request, String updatedBy) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new LogisixException(ErrorCode.USER_NOT_FOUND));
-
-        // 정보 수정 계정과 현재 계정 일치 여부 검증
-        if (!user.getUsername().equals(updatedBy)) {
+    public UserResponse updateUser(Long userId, UserUpdateRequest request, String requesterRole, String updatedBy) {
+        if (!Role.MASTER.name().equals(requesterRole)) {
             throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
         }
 
-        // 수정된 패스워드 암호화
+        QUser qUser = QUser.user;
+        BooleanExpression condition = qUser.userId.eq(userId).and(isNotDeleted(qUser));
+
+        User user = queryFactory
+                .selectFrom(qUser)
+                .where(condition)
+                .fetchOne();
+
+        if (user == null) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        }
+
         String encodedPassword = request.password() != null
                 ? passwordEncoder.encode(request.password())
                 : null;
@@ -166,13 +171,21 @@ public class UserService {
 
     // 회원 삭제
     @Transactional
-    public void deleteUser(Long userId, String deletedBy) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new LogisixException(ErrorCode.USER_NOT_FOUND));
-
-        // 삭제 계정과 현재 계정 일치 여부 검증
-        if (!user.getUsername().equals(deletedBy)) {
+    public void deleteUser(Long userId, String requesterRole, String deletedBy) {
+        if (!Role.MASTER.name().equals(requesterRole)) {
             throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        QUser qUser = QUser.user;
+        BooleanExpression condition = qUser.userId.eq(userId).and(isNotDeleted(qUser));
+
+        User user = queryFactory
+                .selectFrom(qUser)
+                .where(condition)
+                .fetchOne();
+
+        if (user == null) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
         }
 
         user.deleteBase(deletedBy);
@@ -189,8 +202,18 @@ public class UserService {
             throw new LogisixException(ErrorCode.USER_NOT_FOUND);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new LogisixException(ErrorCode.USER_NOT_FOUND));
+        QUser qUser = QUser.user;
+        BooleanExpression condition = qUser.userId.eq(userId).and(isNotDeleted(qUser));
+
+        // 삭제되지 않은 사용자 확인
+        User user = queryFactory
+                .selectFrom(qUser)
+                .where(condition)
+                .fetchOne();
+
+        if (user == null) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        }
 
         Role newRole;
         try {
@@ -205,4 +228,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    private BooleanExpression isNotDeleted(QUser qUser) {
+        return qUser.isDeleted.isFalse();
+    }
 }

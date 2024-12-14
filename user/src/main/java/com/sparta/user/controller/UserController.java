@@ -103,20 +103,17 @@ public class UserController {
     }
 
     // 회원 정보 수정
-    @PatchMapping("/update")
+    @PatchMapping("/{user_id}")
     public ResponseEntity<?> updateUser(
+            @PathVariable("user_id") Long userId,
             @Valid @RequestBody UserUpdateRequest request,
             HttpServletRequest httpRequest) {
-        try {
-            // 헤더에서 사용자 정보 추출
-            Long userId = Long.parseLong(httpRequest.getHeader("X-User-Id"));
-            String updatedBy = httpRequest.getHeader("X-User-Name");
+        String requesterRole = httpRequest.getHeader("X-User-Role");
+        String updatedBy = httpRequest.getHeader("X-User-Name");
 
-            // 사용자 정보 업데이트
-            UserResponse updatedUser = userService.updateUser(userId, request, updatedBy);
+        try {
+            UserResponse updatedUser = userService.updateUser(userId, request, requesterRole, updatedBy);
             return ResponseEntity.ok(ApiResponse.success(updatedUser));
-        } catch (NumberFormatException e) {
-            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
         } catch (LogisixException e) {
             throw e;
         } catch (Exception e) {
@@ -125,19 +122,16 @@ public class UserController {
     }
 
     // 회원 정보 삭제
-    @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteUser(HttpServletRequest httpRequest) {
+    @DeleteMapping("/{user_id}")
+    public ResponseEntity<?> deleteUser(
+            @PathVariable("user_id") Long userId,
+            HttpServletRequest httpRequest) {
+        String requesterRole = httpRequest.getHeader("X-User-Role");
+        String deletedBy = httpRequest.getHeader("X-User-Name");
+
         try {
-            // 헤더에서 사용자 정보 추출
-            Long userId = Long.parseLong(httpRequest.getHeader("X-User-Id"));
-            String deletedBy = httpRequest.getHeader("X-User-Name");
-
-            // 사용자 삭제
-            userService.deleteUser(userId, deletedBy);
-
+            userService.deleteUser(userId, requesterRole, deletedBy);
             return ResponseEntity.ok(ApiResponse.success("사용자 정보가 삭제되었습니다."));
-        } catch (NumberFormatException e) {
-            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
         } catch (LogisixException e) {
             throw e;
         } catch (Exception e) {
