@@ -108,7 +108,7 @@ public class UserService {
             condition = condition.and(qUser.slackAccount.containsIgnoreCase(slackAccount));
         }
 
-        // 일반 사용자라면 자신만 조회
+        // 마스터 외 권한은 본인만 조회
         if (!Role.MASTER.name().equals(requesterRole)) {
             condition = condition.and(qUser.userId.eq(requesterId));
         }
