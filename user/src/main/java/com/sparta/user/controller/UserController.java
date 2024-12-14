@@ -2,7 +2,14 @@ package com.sparta.user.controller;
 
 import com.sparta.user.domain.Role;
 import com.sparta.user.domain.User;
-import com.sparta.user.dto.*;
+import com.sparta.user.dto.request.UserCreateRequest;
+import com.sparta.user.dto.request.UserGrantRoleRequest;
+import com.sparta.user.dto.request.UserLoginRequest;
+import com.sparta.user.dto.request.UserUpdateRequest;
+import com.sparta.user.dto.response.ApiResponse;
+import com.sparta.user.dto.response.PageResponse;
+import com.sparta.user.dto.response.UserListResponse;
+import com.sparta.user.dto.response.UserResponse;
 import com.sparta.user.service.UserService;
 import com.sparta.user.util.JwtUtil;
 import com.sparta.user.exception.LogisixException;
@@ -64,12 +71,23 @@ public class UserController {
         }
     }
 
-    // 전체 목록 조회 (MASTER 전용)
+    // 단건 조회
+    @GetMapping("/{user_id}")
+    public ResponseEntity<ApiResponse<UserListResponse>> getUserById(
+            @PathVariable("user_id") Long userId,
+            HttpServletRequest httpRequest) {
+        String requesterRole = (String) httpRequest.getAttribute("role");
+        Long requesterId = (Long) httpRequest.getAttribute("userId");
+
+        UserListResponse user = userService.getUserById(userId, requesterRole, requesterId);
+        return ResponseEntity.ok(ApiResponse.success(user));
+    }
+
+    // 목록 조회
     @GetMapping("/list")
     public ResponseEntity<ApiResponse<PageResponse<UserListResponse>>> listUsers(
             @RequestParam(value = "username", required = false) String username,
-            @RequestParam(value = "role", required = false) String role,
-            @RequestParam(value = "isDeleted", required = false) Boolean isDeleted,
+            @RequestParam(value = "slack_account", required = false) String slackAccount,
             @PageableDefault(size = 10)
             @SortDefault.SortDefaults({
                     @SortDefault(sort = "createdAt", direction = Sort.Direction.DESC),
@@ -77,22 +95,11 @@ public class UserController {
             })
             Pageable pageable,
             HttpServletRequest httpRequest) {
+        String requesterRole = (String) httpRequest.getAttribute("role");
+        Long requesterId = (Long) httpRequest.getAttribute("userId");
 
-        try {
-            // MASTER 권한 확인
-            String requesterRole = httpRequest.getHeader("X-User-Role");
-            if (!Role.MASTER.name().equals(requesterRole)) {
-                throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
-            }
-
-            // QueryDSL 기반 사용자 목록 조회
-            PageResponse<UserListResponse> userList = userService.listUsers(username, role, isDeleted, pageable);
-            return ResponseEntity.ok(ApiResponse.success(userList));
-        } catch (LogisixException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new LogisixException(ErrorCode.API_CALL_FAILED);
-        }
+        PageResponse<UserListResponse> users = userService.listUsers(username, slackAccount, requesterRole, requesterId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(users));
     }
 
     // 회원 정보 수정

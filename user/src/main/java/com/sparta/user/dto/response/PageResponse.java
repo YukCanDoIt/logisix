@@ -1,4 +1,4 @@
-package com.sparta.user.dto;
+package com.sparta.user.dto.response;
 
 import org.springframework.data.domain.Page;
 

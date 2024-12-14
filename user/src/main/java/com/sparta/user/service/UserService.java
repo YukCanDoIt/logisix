@@ -1,26 +1,37 @@
 package com.sparta.user.service;
 
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.sparta.user.domain.QUser;
 import com.sparta.user.domain.User;
 import com.sparta.user.domain.Role;
-import com.sparta.user.dto.*;
+import com.sparta.user.dto.request.UserCreateRequest;
+import com.sparta.user.dto.request.UserGrantRoleRequest;
+import com.sparta.user.dto.request.UserUpdateRequest;
+import com.sparta.user.dto.response.PageResponse;
+import com.sparta.user.dto.response.UserListResponse;
+import com.sparta.user.dto.response.UserResponse;
 import com.sparta.user.exception.LogisixException;
 import com.sparta.user.exception.ErrorCode;
 import com.sparta.user.repository.UserRepository;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JPAQueryFactory queryFactory;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JPAQueryFactory queryFactory) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.queryFactory = queryFactory;
     }
 
     // 회원가입
@@ -54,11 +65,70 @@ public class UserService {
         return user;
     }
 
-    // 회원 정보 목록 조회 (MASTER 전용)
+    // 단건 조회
     @Transactional(readOnly = true)
-    public PageResponse<UserListResponse> listUsers(String username, String role, Boolean isDeleted, Pageable pageable) {
-        Page<User> users = userRepository.findAllWithFilters(username, role, isDeleted, pageable);
-        return PageResponse.of(users.map(UserListResponse::from));
+    public UserListResponse getUserById(Long userId, String requesterRole, Long requesterId) throws LogisixException {
+        QUser qUser = QUser.user;
+
+        BooleanExpression condition = qUser.userId.eq(userId).and(qUser.isDeleted.isFalse());
+
+        if (!Role.MASTER.name().equals(requesterRole) && !userId.equals(requesterId)) {
+            throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        User user = queryFactory
+                .selectFrom(qUser)
+                .where(condition)
+                .fetchOne();
+
+        if (user == null) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return UserListResponse.from(user);
+    }
+
+    // 목록 조회
+    @Transactional(readOnly = true)
+    public PageResponse<UserListResponse> listUsers(String username, String slackAccount, String requesterRole, Long requesterId, Pageable pageable) throws LogisixException {
+        QUser qUser = QUser.user;
+
+        BooleanExpression condition = qUser.isDeleted.isFalse();
+
+        if (username != null && !username.isBlank()) {
+            condition = condition.and(qUser.username.containsIgnoreCase(username));
+        }
+        if (slackAccount != null && !slackAccount.isBlank()) {
+            condition = condition.and(qUser.slackAccount.containsIgnoreCase(slackAccount));
+        }
+
+        // 일반 사용자라면 자신만 조회
+        if (!Role.MASTER.name().equals(requesterRole)) {
+            condition = condition.and(qUser.userId.eq(requesterId));
+        }
+
+        List<User> users = queryFactory
+                .selectFrom(qUser)
+                .where(condition)
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        long total = queryFactory
+                .select(qUser.count())
+                .from(qUser)
+                .where(condition)
+                .fetchOne();
+
+        if (total == 0) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return new PageResponse<>(
+                pageable.getPageNumber() + 1,
+                (int) Math.ceil((double) total / pageable.getPageSize()),
+                users.stream().map(UserListResponse::from).toList()
+        );
     }
 
     // 회원 정보 수정

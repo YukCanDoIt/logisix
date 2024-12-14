@@ -1,4 +1,4 @@
-package com.sparta.user.dto;
+package com.sparta.user.dto.response;
 
 import com.sparta.user.domain.User;
 
