@@ -1,6 +1,7 @@
 package com.sparta.user.service;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.ComparableExpressionBase;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sparta.user.domain.QUser;
 import com.sparta.user.domain.User;
@@ -14,12 +15,17 @@ import com.sparta.user.dto.response.UserResponse;
 import com.sparta.user.exception.LogisixException;
 import com.sparta.user.exception.ErrorCode;
 import com.sparta.user.repository.UserRepository;
+import com.sparta.user.util.QueryDslUtil;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static com.sparta.user.util.QueryDslUtil.getOrderSpecifiers;
 
 @Service
 public class UserService {
@@ -107,11 +113,17 @@ public class UserService {
             condition = condition.and(qUser.userId.eq(requesterId));
         }
 
+        // 정렬 필드 매핑
+        Map<String, ComparableExpressionBase<?>> fieldMap = new HashMap<>();
+        fieldMap.put("createdAt", qUser.createdAt);
+        fieldMap.put("updatedAt", qUser.updatedAt);
+
         List<User> users = queryFactory
                 .selectFrom(qUser)
                 .where(condition)
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
+                .orderBy(QueryDslUtil.getOrderSpecifiers(pageable.getSort(), fieldMap))
                 .fetch();
 
         long total = queryFactory
