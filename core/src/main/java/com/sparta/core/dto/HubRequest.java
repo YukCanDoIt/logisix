@@ -3,6 +3,7 @@ package com.sparta.core.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 
 public record HubRequest(
     @NotBlank(message = "허브 이름을 입력해주세요.")
@@ -14,10 +15,10 @@ public record HubRequest(
     String address,
 
     @NotNull(message = "위도를 입력해주세요.")
-    Long latitude,
+    BigDecimal latitude,
 
     @NotNull(message = "경도를 입력해주세요.")
-    Long longitude,
+    BigDecimal longitude,
 
     Long hubManagerId
 ) {

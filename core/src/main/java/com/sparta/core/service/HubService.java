@@ -38,7 +38,8 @@ public class HubService {
       throw new ApiException(ErrorCode.DUPLICATE_VALUE);
     }
 
-    Coordinate coordinate = new Coordinate(hubRequest.longitude(), hubRequest.latitude());
+    Coordinate coordinate = new Coordinate(hubRequest.longitude().doubleValue(),
+        hubRequest.latitude().doubleValue());
     Hub hub = new Hub(hubRequest, geometryFactory.createPoint(coordinate));
     hubRepository.save(hub);
   }
@@ -72,7 +73,8 @@ public class HubService {
 
     Hub fetchedHub = hubOptional.get();
 
-    Coordinate coordinate = new Coordinate(hubRequest.longitude(), hubRequest.latitude());
+    Coordinate coordinate = new Coordinate(hubRequest.longitude().doubleValue(),
+        hubRequest.latitude().doubleValue());
     Hub hub = new Hub(hubRequest, geometryFactory.createPoint(coordinate));
 
     fetchedHub.update(hub);
