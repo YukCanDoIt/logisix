@@ -67,6 +67,9 @@ public class UserController {
     // 전체 목록 조회 (MASTER 전용)
     @GetMapping("/list")
     public ResponseEntity<ApiResponse<PageResponse<UserListResponse>>> listUsers(
+            @RequestParam(value = "username", required = false) String username,
+            @RequestParam(value = "role", required = false) String role,
+            @RequestParam(value = "isDeleted", required = false) Boolean isDeleted,
             @PageableDefault(size = 10)
             @SortDefault.SortDefaults({
                     @SortDefault(sort = "createdAt", direction = Sort.Direction.DESC),
@@ -76,21 +79,18 @@ public class UserController {
             HttpServletRequest httpRequest) {
 
         try {
-            // 헤더에서 사용자 정보 추출
-            String requesterRole = httpRequest.getHeader("X-User-Role");
-
             // MASTER 권한 확인
+            String requesterRole = httpRequest.getHeader("X-User-Role");
             if (!Role.MASTER.name().equals(requesterRole)) {
                 throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
             }
 
-            // 사용자 목록 조회
-            PageResponse<UserListResponse> userList = userService.listUsers(pageable);
+            // QueryDSL 기반 사용자 목록 조회
+            PageResponse<UserListResponse> userList = userService.listUsers(username, role, isDeleted, pageable);
             return ResponseEntity.ok(ApiResponse.success(userList));
         } catch (LogisixException e) {
             throw e;
         } catch (Exception e) {
-            log.error("사용자 목록 조회 중 예외 발생: {}", e.getMessage(), e);
             throw new LogisixException(ErrorCode.API_CALL_FAILED);
         }
     }
@@ -138,6 +138,7 @@ public class UserController {
         }
     }
 
+    // 권한 부여
     @PostMapping("/grant-role")
     public ResponseEntity<?> grantRole(
             @Valid @RequestBody UserGrantRoleRequest request,

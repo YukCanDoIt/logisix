@@ -7,9 +7,7 @@ import com.sparta.user.exception.LogisixException;
 import com.sparta.user.exception.ErrorCode;
 import com.sparta.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,8 +56,8 @@ public class UserService {
 
     // 회원 정보 목록 조회 (MASTER 전용)
     @Transactional(readOnly = true)
-    public PageResponse<UserListResponse> listUsers(Pageable pageable) {
-        Page<User> users = userRepository.findAllByIsDeletedFalse(pageable);
+    public PageResponse<UserListResponse> listUsers(String username, String role, Boolean isDeleted, Pageable pageable) {
+        Page<User> users = userRepository.findAllWithFilters(username, role, isDeleted, pageable);
         return PageResponse.of(users.map(UserListResponse::from));
     }
 
