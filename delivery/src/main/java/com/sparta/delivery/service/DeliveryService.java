@@ -1,8 +1,7 @@
 package com.sparta.delivery.service;
 
 import com.sparta.delivery.common.ApiResponse;
-import com.sparta.delivery.dto.CreateDeliveryRequest;
-import com.sparta.delivery.dto.HubRoute;
+import com.sparta.delivery.dto.*;
 import com.sparta.delivery.entity.Deliveries;
 import com.sparta.delivery.entity.DeliveryRecords;
 import com.sparta.delivery.util.Point;
@@ -18,6 +17,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -144,4 +144,19 @@ public class DeliveryService {
         deliveryRecordsJpaRepository.saveAll(deliveryRecordsList);
     }
 
+    // 배송 단건 조회
+    public ApiResponse<GetDeliveryResponse> getDelivery(UUID deliveryId) {
+        // 사용자 권한 및 유효성 체크
+
+        Optional<Deliveries> delivery = deliveryJpaRepository.findByDeliveryId(deliveryId);
+        if(delivery.isEmpty()) {
+            return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
+        }
+
+        List<DeliveryRecords> deliveryRecordsList = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(deliveryId);
+
+        GetDeliveryResponse response = GetDeliveryResponse.create(delivery.get(), deliveryRecordsList);
+
+        return new ApiResponse<>(200, "배송 정보 조회 성공", response);
+    }
 }
