@@ -22,7 +22,7 @@ public class SlackMessage {
   @Column(name = "channel", nullable = false)
   private String channel;
 
-  @Column(name = "message", nullable = false)
+  @Column(name = "message", nullable = false, length = 2000) // 길이 확장
   private String message;
 
   @Column(name = "timestamp")
