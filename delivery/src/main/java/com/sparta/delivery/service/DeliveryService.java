@@ -161,6 +161,7 @@ public class DeliveryService {
     }
 
     // 배송 단건 조회
+    @Transactional(readOnly = true)
     public ApiResponse<GetDeliveryResponse> getDelivery(UUID deliveryId) {
         // 사용자 권한 및 유효성 체크
 

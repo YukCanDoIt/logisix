@@ -7,6 +7,7 @@ import com.sparta.delivery.dto.UpdateDelivererRequest;
 import com.sparta.delivery.entity.DelivererStatusEnum;
 import com.sparta.delivery.entity.Deliverer;
 import com.sparta.delivery.repository.DeliverersJpaRepository;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +40,7 @@ public class DelivererService {
     }
 
     // 배송 담당자 단건 조회
+    @Transactional(readOnly = true)
     public ApiResponse<GetDelivererResponse> getDeliverer(Long delivererId) {
         Optional<Deliverer> optionalDeliverer = deliverersJpaRepository.findByDelivererId(delivererId);
         if (optionalDeliverer.isPresent()) {
@@ -95,7 +97,6 @@ public class DelivererService {
                 .orElseThrow(() -> new IllegalArgumentException("허브-허브 배송에 배정 가능한 담당자가 없습니다."));
     }
 
-    // 배송 담당자 조회 (공통 메서드)
     private Optional<Deliverer> findDelivererById(Long delivererId) {
         return deliverersJpaRepository.findByDelivererId(delivererId);
     }
