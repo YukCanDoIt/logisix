@@ -42,6 +42,8 @@ dependencies {
 	implementation project(':order')  // order 모듈을 의존성으로 추가
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
 
+	implementation 'org.postgresql:postgresql:42.7.1'
+
 }
 
 dependencyManagement {
