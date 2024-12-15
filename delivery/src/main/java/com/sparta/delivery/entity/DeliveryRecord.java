@@ -11,6 +11,7 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity(name = "p_delivery_records")
@@ -38,6 +39,10 @@ public class DeliveryRecord extends BaseEntity {
 
     @Column(nullable = false)
     private Integer sequence;
+
+    private LocalDateTime startAt;
+
+    private LocalDateTime endAt;
 
     @Column(nullable = false)
     @Convert(converter = DurationToIntervalConverter.class)
@@ -81,5 +86,18 @@ public class DeliveryRecord extends BaseEntity {
     public void changeDeliverer(Deliverer deliverer) {
         this.deliverer = deliverer;
     }
+
+    public void startDelivery(LocalDateTime startAt) {
+        this.status = DeliveryRecordsStatusEnum.IN_PROGRESS;
+        this.startAt = startAt;
+    }
+
+    public void endDelivery(LocalDateTime endAt, BigDecimal actudalDist) {
+        this.status = DeliveryRecordsStatusEnum.COMPLETED;
+        this.actualDist = actudalDist;
+        this.endAt = endAt;
+        this.actualTime = Duration.between(startAt, endAt);
+    }
+
 
 }

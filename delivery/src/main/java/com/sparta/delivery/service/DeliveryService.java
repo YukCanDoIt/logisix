@@ -11,13 +11,13 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -140,6 +140,9 @@ public class DeliveryService {
 
     private void saveDelivery(Delivery delivery, List<DeliveryRecord> deliveryRecordList) {
         delivery.setTotalSequence(deliveryRecordList.size());
+        if(deliveryRecordList.size() == 1) {
+            delivery.setStatus(DeliveryStatusEnum.HUB_ARRIVED);
+        }
         delivery.setCurrentSeq(0);
         deliveryJpaRepository.save(delivery);
         deliveryRecordsJpaRepository.saveAll(deliveryRecordList);
@@ -149,14 +152,14 @@ public class DeliveryService {
     public ApiResponse<GetDeliveryResponse> getDelivery(UUID deliveryId) {
         // 사용자 권한 및 유효성 체크
 
-        Optional<Delivery> delivery = deliveryJpaRepository.findByDeliveryId(deliveryId);
-        if(delivery.isEmpty()) {
+        Delivery delivery = findById(deliveryId);
+        if(delivery == null) {
             return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
         }
 
         List<DeliveryRecord> deliveryRecordList = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(deliveryId);
 
-        GetDeliveryResponse response = GetDeliveryResponse.create(delivery.get(), deliveryRecordList);
+        GetDeliveryResponse response = GetDeliveryResponse.create(delivery, deliveryRecordList);
 
         return new ApiResponse<>(200, "배송 정보 조회 성공", response);
     }
@@ -200,5 +203,66 @@ public class DeliveryService {
             return new ApiResponse<>(500, "배송 담당자 변경 중 에러가 발생했습니다", null);
         }
 
+    }
+
+    // 배송 상태 업데이트
+    @Transactional
+    public ApiResponse<Void> updateDeliveryStatus(UUID deliveryRecordId, UpdateDeliveryStatusRequest request) {
+        DeliveryRecord deliveryRecord = findDeliveryRecordById(deliveryRecordId);
+        if (deliveryRecord == null) {
+            return new ApiResponse<>(400, "해당하는 배송 경로 정보가 없습니다", null);
+        }
+
+        Delivery delivery = deliveryRecord.getDelivery();
+        DeliveryRecordsStatusEnum recordStatus = deliveryRecord.getStatus();
+
+        try {
+            if (recordStatus == DeliveryRecordsStatusEnum.WAIT) {
+                handleWaitStatus(deliveryRecord, delivery);
+            } else if (recordStatus == DeliveryRecordsStatusEnum.IN_PROGRESS) {
+                handleInProgressStatus(deliveryRecord, delivery, request);
+            } else {
+                return new ApiResponse<>(400, "이미 완료된 배송 경로입니다", null);
+            }
+            return new ApiResponse<>(200, "배송 정보 업데이트 완료", null);
+        } catch (Exception e) {
+            logger.error("Error while updating delivery status: {}", e.getMessage(), e);
+            return new ApiResponse<>(500, "배송 상태 업데이트 중 에러 발생", null);
+        }
+    }
+
+    private void handleWaitStatus(DeliveryRecord deliveryRecord, Delivery delivery) {
+        LocalDateTime now = LocalDateTime.now();
+        deliveryRecord.startDelivery(now);
+        deliveryRecordsJpaRepository.save(deliveryRecord);
+
+        if (deliveryRecord.getSequence() == 1) {
+            delivery.setStartAt(now);
+        }
+        if (delivery.getStatus() == DeliveryStatusEnum.HUB_ARRIVED) {
+            delivery.setStatus(DeliveryStatusEnum.IN_DELIVERY);
+        }
+        deliveryJpaRepository.save(delivery);
+    }
+
+    private void handleInProgressStatus(DeliveryRecord deliveryRecord, Delivery delivery, UpdateDeliveryStatusRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+        deliveryRecord.endDelivery(now, request.actualDist());
+        deliveryRecordsJpaRepository.save(deliveryRecord);
+
+        if (delivery.getStatus() == DeliveryStatusEnum.IN_DELIVERY) {
+            delivery.setStatus(DeliveryStatusEnum.DONE);
+        } else {
+            delivery.setCurrentSeq(delivery.getCurrentSeq() + 1);
+        }
+        deliveryJpaRepository.save(delivery);
+    }
+
+    private Delivery findById(UUID deliveryId){
+        return deliveryJpaRepository.findByDeliveryId(deliveryId).orElse(null);
+    }
+
+    private DeliveryRecord findDeliveryRecordById(UUID deliveryRecordId) {
+        return deliveryRecordsJpaRepository.findById(deliveryRecordId).orElse(null);
     }
 }

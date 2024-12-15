@@ -43,6 +43,10 @@ public class Delivery extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime dispatchDeadline;
 
+    private LocalDateTime startAt;
+
+    private LocalDateTime endAt;
+
     private Integer totalSequence;
 
     private Integer currentSeq;
@@ -73,6 +77,18 @@ public class Delivery extends BaseEntity {
                 .recipient(recipient)
                 .recipientSlackAccount(recipientSlackAccount)
                 .build();
+    }
+
+    public void setFirstDeliveryStatus(LocalDateTime startAt) {
+        this.startAt = startAt;
+        this.status = DeliveryStatusEnum.HUB_MOVE;
+        this.currentSeq = 1;
+    }
+
+    public void setHubArrivedDeliveryStatus(LocalDateTime endAt) {
+        this.endAt = endAt;
+        this.status = DeliveryStatusEnum.HUB_ARRIVED;
+        this.currentSeq = this.getTotalSequence()-2;
     }
 
 }
