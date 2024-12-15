@@ -19,13 +19,13 @@ public class User extends BaseEntity {
     @Column(name="user_id", nullable=false, updatable=false)
     private Long userId;
 
-    @Column(name="username", nullable = false, length = 100)
+    @Column(name="username", nullable = false, length = 100, unique = true)
     private String username;
 
     @Column(name="password", nullable = false, length = 255)
     private String password;
 
-    @Column(name="slackAccount", nullable = false, length = 255)
+    @Column(name="slack_account", nullable = false, length = 255)
     private String slackAccount;
 
     @Enumerated(EnumType.STRING)

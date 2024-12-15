@@ -47,7 +47,15 @@ public class UserService {
             throw new LogisixException(ErrorCode.DUPLICATE_USERNAME);
         }
 
-        User existingUser = userRepository.findByUsername(request.username());
+        QUser qUser = QUser.user;
+        BooleanExpression condition = qUser.username.eq(request.username())
+                .and(isNotDeleted(qUser));
+
+        User existingUser = queryFactory
+                .selectFrom(qUser)
+                .where(condition)
+                .fetchOne();
+
         if (existingUser != null) {
             throw new LogisixException(ErrorCode.DUPLICATE_USERNAME);
         }
@@ -64,7 +72,15 @@ public class UserService {
 
     // 로그인용 유저 검증
     public User validateUser(String username, String password) {
-        User user = userRepository.findByUsername(username);
+        QUser qUser = QUser.user;
+
+        BooleanExpression condition = qUser.username.eq(username).and(isNotDeleted(qUser));
+
+        User user = queryFactory
+                .selectFrom(qUser)
+                .where(condition)
+                .fetchOne();
+
         if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
             throw new LogisixException(ErrorCode.INVALID_PASSWORD);
         }
