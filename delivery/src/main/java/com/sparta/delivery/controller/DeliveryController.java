@@ -52,7 +52,7 @@ public class DeliveryController {
     }
 
     // 배송 취소 요청
-    @PatchMapping("/{deliveryId}/cancle")
+    @PatchMapping("/{deliveryId}/cancel")
     public ApiResponse<Void> cancleDelivery(
             @PathVariable UUID deliveryId
     ) {
