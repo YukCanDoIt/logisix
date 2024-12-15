@@ -1,26 +1,20 @@
 package com.sparta.slack.service;
 
 import com.sparta.order.dto.OrderRequest;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class AICalculationService {
 
-  private final RestTemplate restTemplate;
-
-  @Value("${ai.api.url}")
-  private String aiApiUrl;
-
-  public AICalculationService(RestTemplate restTemplate) {
-    this.restTemplate = restTemplate;
-  }
+  private final AIClientService aiClientService;
 
   public String calculateDeadline(OrderRequest orderRequest) {
-    Map<String, Object> requestPayload = Map.of(
+    // 요청 데이터 생성
+    Map<String, Object> payload = Map.of(
         "orderItems", orderRequest.getOrderItems(),
         "expectedDeliveryDate", orderRequest.expectedDeliveryDate(),
         "supplierId", orderRequest.supplierId(),
@@ -30,7 +24,7 @@ public class AICalculationService {
         "requestDetails", orderRequest.requestDetails()
     );
 
-    String response = restTemplate.postForObject(aiApiUrl, requestPayload, String.class);
-    return response != null ? response : "AI 처리 실패";
+    // 공통 서비스 호출
+    return aiClientService.sendRequest(payload, "/calculateDeadline");
   }
 }
