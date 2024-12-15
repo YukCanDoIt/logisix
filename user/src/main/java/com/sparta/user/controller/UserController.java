@@ -2,7 +2,14 @@ package com.sparta.user.controller;
 
 import com.sparta.user.domain.Role;
 import com.sparta.user.domain.User;
-import com.sparta.user.dto.*;
+import com.sparta.user.dto.request.UserCreateRequest;
+import com.sparta.user.dto.request.UserGrantRoleRequest;
+import com.sparta.user.dto.request.UserLoginRequest;
+import com.sparta.user.dto.request.UserUpdateRequest;
+import com.sparta.user.dto.response.ApiResponse;
+import com.sparta.user.dto.response.PageResponse;
+import com.sparta.user.dto.response.UserListResponse;
+import com.sparta.user.dto.response.UserResponse;
 import com.sparta.user.service.UserService;
 import com.sparta.user.util.JwtUtil;
 import com.sparta.user.exception.LogisixException;
@@ -64,9 +71,23 @@ public class UserController {
         }
     }
 
-    // 전체 목록 조회 (MASTER 전용)
+    // 단건 조회
+    @GetMapping("/{user_id}")
+    public ResponseEntity<ApiResponse<UserListResponse>> getUserById(
+            @PathVariable("user_id") Long userId,
+            HttpServletRequest httpRequest) {
+        String requesterRole = (String) httpRequest.getAttribute("role");
+        Long requesterId = (Long) httpRequest.getAttribute("userId");
+
+        UserListResponse user = userService.getUserById(userId, requesterRole, requesterId);
+        return ResponseEntity.ok(ApiResponse.success(user));
+    }
+
+    // 목록 조회
     @GetMapping("/list")
     public ResponseEntity<ApiResponse<PageResponse<UserListResponse>>> listUsers(
+            @RequestParam(value = "username", required = false) String username,
+            @RequestParam(value = "slack_account", required = false) String slackAccount,
             @PageableDefault(size = 10)
             @SortDefault.SortDefaults({
                     @SortDefault(sort = "createdAt", direction = Sort.Direction.DESC),
@@ -74,42 +95,25 @@ public class UserController {
             })
             Pageable pageable,
             HttpServletRequest httpRequest) {
+        String requesterRole = (String) httpRequest.getAttribute("role");
+        Long requesterId = (Long) httpRequest.getAttribute("userId");
 
-        try {
-            // 헤더에서 사용자 정보 추출
-            String requesterRole = httpRequest.getHeader("X-User-Role");
-
-            // MASTER 권한 확인
-            if (!Role.MASTER.name().equals(requesterRole)) {
-                throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
-            }
-
-            // 사용자 목록 조회
-            PageResponse<UserListResponse> userList = userService.listUsers(pageable);
-            return ResponseEntity.ok(ApiResponse.success(userList));
-        } catch (LogisixException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("사용자 목록 조회 중 예외 발생: {}", e.getMessage(), e);
-            throw new LogisixException(ErrorCode.API_CALL_FAILED);
-        }
+        PageResponse<UserListResponse> users = userService.listUsers(username, slackAccount, requesterRole, requesterId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(users));
     }
 
     // 회원 정보 수정
-    @PatchMapping("/update")
+    @PatchMapping("/{user_id}")
     public ResponseEntity<?> updateUser(
+            @PathVariable("user_id") Long userId,
             @Valid @RequestBody UserUpdateRequest request,
             HttpServletRequest httpRequest) {
-        try {
-            // 헤더에서 사용자 정보 추출
-            Long userId = Long.parseLong(httpRequest.getHeader("X-User-Id"));
-            String updatedBy = httpRequest.getHeader("X-User-Name");
+        String requesterRole = httpRequest.getHeader("X-User-Role");
+        String updatedBy = httpRequest.getHeader("X-User-Name");
 
-            // 사용자 정보 업데이트
-            UserResponse updatedUser = userService.updateUser(userId, request, updatedBy);
+        try {
+            UserResponse updatedUser = userService.updateUser(userId, request, requesterRole, updatedBy);
             return ResponseEntity.ok(ApiResponse.success(updatedUser));
-        } catch (NumberFormatException e) {
-            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
         } catch (LogisixException e) {
             throw e;
         } catch (Exception e) {
@@ -118,19 +122,16 @@ public class UserController {
     }
 
     // 회원 정보 삭제
-    @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteUser(HttpServletRequest httpRequest) {
+    @DeleteMapping("/{user_id}")
+    public ResponseEntity<?> deleteUser(
+            @PathVariable("user_id") Long userId,
+            HttpServletRequest httpRequest) {
+        String requesterRole = httpRequest.getHeader("X-User-Role");
+        String deletedBy = httpRequest.getHeader("X-User-Name");
+
         try {
-            // 헤더에서 사용자 정보 추출
-            Long userId = Long.parseLong(httpRequest.getHeader("X-User-Id"));
-            String deletedBy = httpRequest.getHeader("X-User-Name");
-
-            // 사용자 삭제
-            userService.deleteUser(userId, deletedBy);
-
+            userService.deleteUser(userId, requesterRole, deletedBy);
             return ResponseEntity.ok(ApiResponse.success("사용자 정보가 삭제되었습니다."));
-        } catch (NumberFormatException e) {
-            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
         } catch (LogisixException e) {
             throw e;
         } catch (Exception e) {
@@ -138,6 +139,7 @@ public class UserController {
         }
     }
 
+    // 권한 부여
     @PostMapping("/grant-role")
     public ResponseEntity<?> grantRole(
             @Valid @RequestBody UserGrantRoleRequest request,
