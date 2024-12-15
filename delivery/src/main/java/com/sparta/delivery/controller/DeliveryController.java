@@ -59,4 +59,12 @@ public class DeliveryController {
         return deliveryService.cancleDelivery(deliveryId);
     }
 
+    // 배송 삭제 요청
+    @DeleteMapping("/{deliveryId}")
+    public ApiResponse<Void> deleteDelivery(
+            @PathVariable UUID deliveryId
+    ){
+        return deliveryService.deleteDelivery(deliveryId);
+    }
+
 }

@@ -321,8 +321,28 @@ public class DeliveryService {
         return new ApiResponse<>(200, "배송 취소 성공", null);
     }
 
+    // 배송 삭제 요청
+    public ApiResponse<Void> deleteDelivery(UUID deliveryId) {
+        Delivery delivery = findById(deliveryId);
+        if(delivery == null) {
+            return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
+        }
+        if(delivery.getStatus() != DeliveryStatusEnum.DONE && delivery.getStatus() != DeliveryStatusEnum.HUB_WAIT) {
+            return new ApiResponse<>(400, "진행중인 배송입니다", null);
+        }
+        List<DeliveryRecord> records = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(deliveryId);
+        records.forEach(deliveryRecord -> deliveryRecord.deleteBase("temp_username"));
+        deliveryRecordsJpaRepository.saveAll(records);
+
+        delivery.deleteBase("temp_username");
+        deliveryJpaRepository.save(delivery);
+
+        return new ApiResponse<>(200, "배송 정보 삭제 성공", null);
+    }
+
     private Delivery findById(UUID deliveryId){
         return deliveryJpaRepository.findByDeliveryId(deliveryId).orElse(null);
     }
+
 
 }
