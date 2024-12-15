@@ -16,9 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +24,7 @@ public class DeliveryService {
 
     private final PathService pathService;
     private final KakaoMapService kakaoMapService;
+    private final DelivererService delivererService;
     private final DeliverersJpaRepository deliverersJpaRepository;
     private final DeliveriesJpaRepository deliveryJpaRepository;
     private final DeliveryRecordsJpaRepository deliveryRecordsJpaRepository;
@@ -34,6 +33,7 @@ public class DeliveryService {
 
 
     // 배송 생성
+    @Transactional
     public ApiResponse<Void> createDelivery(CreateDeliveryRequest request) {
 
         try {
@@ -208,61 +208,99 @@ public class DeliveryService {
     // 배송 상태 업데이트
     @Transactional
     public ApiResponse<Void> updateDeliveryStatus(UUID deliveryRecordId, UpdateDeliveryStatusRequest request) {
-        DeliveryRecord deliveryRecord = findDeliveryRecordById(deliveryRecordId);
-        if (deliveryRecord == null) {
-            return new ApiResponse<>(400, "해당하는 배송 경로 정보가 없습니다", null);
-        }
-
-        Delivery delivery = deliveryRecord.getDelivery();
-        DeliveryRecordsStatusEnum recordStatus = deliveryRecord.getStatus();
+        DeliveryRecord deliveryRecord = deliveryRecordsJpaRepository.findById(deliveryRecordId)
+                .orElseThrow(() -> new IllegalArgumentException("해당하는 배송 경로 정보가 없습니다."));
 
         try {
-            if (recordStatus == DeliveryRecordsStatusEnum.WAIT) {
-                handleWaitStatus(deliveryRecord, delivery);
-            } else if (recordStatus == DeliveryRecordsStatusEnum.IN_PROGRESS) {
-                handleInProgressStatus(deliveryRecord, delivery, request);
-            } else {
-                return new ApiResponse<>(400, "이미 완료된 배송 경로입니다", null);
-            }
-            return new ApiResponse<>(200, "배송 정보 업데이트 완료", null);
+            handleDeliveryStatusUpdate(deliveryRecord, request);
+            return new ApiResponse<>(200, "배송 상태 업데이트 완료", null);
         } catch (Exception e) {
-            logger.error("Error while updating delivery status: {}", e.getMessage(), e);
-            return new ApiResponse<>(500, "배송 상태 업데이트 중 에러 발생", null);
+            logger.error("Error updating delivery status: {}", e.getMessage(), e);
+            return new ApiResponse<>(500, "배송 상태 업데이트 실패", null);
         }
     }
 
-    private void handleWaitStatus(DeliveryRecord deliveryRecord, Delivery delivery) {
+    private void handleDeliveryStatusUpdate(DeliveryRecord deliveryRecord, UpdateDeliveryStatusRequest request) {
+        Delivery delivery = deliveryRecord.getDelivery();
+        if (deliveryRecord.getStatus() == DeliveryRecordsStatusEnum.WAIT) {
+            startDelivery(deliveryRecord, delivery);
+        } else if (deliveryRecord.getStatus() == DeliveryRecordsStatusEnum.IN_PROGRESS) {
+            completeDelivery(deliveryRecord, delivery, request);
+        } else {
+            throw new IllegalArgumentException("이미 완료된 배송 경로입니다.");
+        }
+
+        updateDeliveryStatusIfNeeded(delivery);
+        assignNextDelivererIfNeeded(deliveryRecord);
+    }
+
+    private void startDelivery(DeliveryRecord deliveryRecord, Delivery delivery) {
         LocalDateTime now = LocalDateTime.now();
         deliveryRecord.startDelivery(now);
-        deliveryRecordsJpaRepository.save(deliveryRecord);
 
         if (deliveryRecord.getSequence() == 1) {
             delivery.setStartAt(now);
+            if(delivery.getStatus() == DeliveryStatusEnum.HUB_ARRIVED) {
+                delivery.setStatus(DeliveryStatusEnum.IN_DELIVERY);
+            } else {
+                delivery.setStatus(DeliveryStatusEnum.HUB_MOVE);
+            }
         }
-        if (delivery.getStatus() == DeliveryStatusEnum.HUB_ARRIVED) {
-            delivery.setStatus(DeliveryStatusEnum.IN_DELIVERY);
-        }
-        deliveryJpaRepository.save(delivery);
+        deliveryRecordsJpaRepository.save(deliveryRecord);
     }
 
-    private void handleInProgressStatus(DeliveryRecord deliveryRecord, Delivery delivery, UpdateDeliveryStatusRequest request) {
+    private void completeDelivery(DeliveryRecord deliveryRecord, Delivery delivery, UpdateDeliveryStatusRequest request) {
         LocalDateTime now = LocalDateTime.now();
         deliveryRecord.endDelivery(now, request.actualDist());
-        deliveryRecordsJpaRepository.save(deliveryRecord);
 
-        if (delivery.getStatus() == DeliveryStatusEnum.IN_DELIVERY) {
+        if (deliveryRecord.getSequence() == delivery.getTotalSequence()) {
             delivery.setStatus(DeliveryStatusEnum.DONE);
         } else {
-            delivery.setCurrentSeq(delivery.getCurrentSeq() + 1);
+            if(delivery.getTotalSequence() - deliveryRecord.getSequence() == 1) {
+                delivery.setStatus(DeliveryStatusEnum.HUB_ARRIVED);
+            }
+            delivery.setCurrentSeq(deliveryRecord.getSequence() +1 );
+        }
+        deliveryRecordsJpaRepository.save(deliveryRecord);
+    }
+
+    private void updateDeliveryStatusIfNeeded(Delivery delivery) {
+        boolean allCompleted = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(delivery.getDeliveryId())
+                .stream()
+                .allMatch(deliveryRecord -> deliveryRecord.getStatus() == DeliveryRecordsStatusEnum.COMPLETED);
+
+        if (allCompleted) {
+            delivery.setStatus(DeliveryStatusEnum.DONE);
         }
         deliveryJpaRepository.save(delivery);
     }
+
+    private void assignNextDelivererIfNeeded(DeliveryRecord currentRecord) {
+        int nextSequence = currentRecord.getSequence() + 1;
+        Optional<DeliveryRecord> nextRecordOpt = deliveryRecordsJpaRepository
+                .findByDeliveryIdAndSequence(currentRecord.getDelivery().getDeliveryId(), nextSequence);
+
+        nextRecordOpt.ifPresent(nextRecord -> {
+            UUID departureHubId = nextRecord.getDepartures();
+            Deliverer nextDeliverer;
+
+            if (nextSequence == nextRecord.getDelivery().getTotalSequence()) {
+                // 허브-업체 배송
+                nextDeliverer = delivererService.assignCompanyDeliverer(departureHubId);
+            } else {
+                // 허브-허브 배송
+                Map<UUID, Double> distances = pathService.calculateDistancesFromHub(pathService.getHubRoutes(), departureHubId);
+                nextDeliverer = delivererService.assignHubDeliverer(distances);
+            }
+
+            nextRecord.assignDeliverer(nextDeliverer);
+            deliveryRecordsJpaRepository.save(nextRecord);
+        });
+    }
+
 
     private Delivery findById(UUID deliveryId){
         return deliveryJpaRepository.findByDeliveryId(deliveryId).orElse(null);
     }
 
-    private DeliveryRecord findDeliveryRecordById(UUID deliveryRecordId) {
-        return deliveryRecordsJpaRepository.findById(deliveryRecordId).orElse(null);
-    }
 }

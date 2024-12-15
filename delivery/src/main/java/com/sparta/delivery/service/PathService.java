@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +115,12 @@ public class PathService {
                 .filter(route -> route.departureHubId().equals(departureHubId) && route.arrivalHubId().equals(arrivalHubId))
                 .findFirst()
                 .orElse(null);
+    }
+
+    public Map<UUID, Double> calculateDistancesFromHub(List<HubRoute> hubRoutes, UUID hubId) {
+        return hubRoutes.stream()
+                .filter(r -> r.departureHubId().equals(hubId))
+                .collect(Collectors.toMap(HubRoute::arrivalHubId, HubRoute::estimatedDistance));
     }
 
 }

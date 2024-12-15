@@ -99,5 +99,8 @@ public class DeliveryRecord extends BaseEntity {
         this.actualTime = Duration.between(startAt, endAt);
     }
 
+    public void assignDeliverer(Deliverer deliverer) {
+        this.deliverer = deliverer;
+    }
 
 }
