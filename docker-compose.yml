@@ -1,6 +1,6 @@
-version: '3.8'
 services:
   eureka-server:
+    build: ./server
     image: eureka-server:latest
     ports:
       - "19090:19090"
@@ -8,13 +8,17 @@ services:
       - app-network
 
   gateway:
+    build: ./gateway
     image: gateway:latest
     ports:
       - "19091:19091"
     depends_on:
       - eureka-server
+    networks:
+      - app-network
 
   user-service:
+    build: ./user
     image: user-service:latest
     ports:
       - "19092:19092"
@@ -24,6 +28,7 @@ services:
       - eureka-server
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/userdb
+
   user-db:
     image: postgres:13
     environment:
@@ -109,6 +114,13 @@ services:
       POSTGRES_PASSWORD: systempass
     ports:
       - "5438:5438"
+    networks:
+      - app-network
+      
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
     networks:
       - app-network
 
