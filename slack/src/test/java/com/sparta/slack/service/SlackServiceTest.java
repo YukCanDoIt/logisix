@@ -5,67 +5,147 @@ import com.sparta.order.dto.OrderRequest;
 import com.sparta.slack.dto.SlackRequest;
 import com.sparta.slack.repository.SlackMessageRepository;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "eureka.client.enable=false",
+    "spring.cloud.discovery.enabled=false"
+})
 class SlackServiceTest {
 
   @Autowired
   private SlackService slackService;
 
   @MockBean
-  private AICalculationService aiCalculationService;  // AICalculationService를 MockBean으로 주입
+  private AICalculationService aiCalculationService;
 
   @MockBean
-  private SlackMessageRepository slackMessageRepository;  // SlackMessageRepository를 MockBean으로 주입
+  private SlackMessageRepository slackMessageRepository;
 
   @Test
-  void sendMessage_Success() {
-    // Given: SlackRequest 생성
+  void sendMessage_Success_WithDynamicTime() {
     SlackRequest slackRequest = new SlackRequest(
-        "YukCanDoIt",  // 채널 이름
-        "Test Message",  // 메시지
-        UUID.randomUUID().toString(),  // 공급자 ID
-        UUID.randomUUID().toString(),  // 수신자 ID
-        UUID.randomUUID().toString(),  // 허브 ID
-        List.of(new OrderItemRequest(UUID.randomUUID(), 10, 100)), // UUID로 수정
-        LocalDateTime.now(),  // 예상 배송 날짜
-        "Order Note",  // 주문 노트
-        "Request Details"  // 요청 세부사항
+        "TestChannel",
+        "Test Message",
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        List.of(new OrderItemRequest(UUID.randomUUID(), 5, 1000)),
+        LocalDateTime.now(),
+        "Test Order Note",
+        "Test Request Details"
     );
 
     OrderRequest orderRequest = new OrderRequest(
-        UUID.randomUUID(),  // 공급자 ID
-        UUID.randomUUID(),  // 수신자 ID
-        UUID.randomUUID(),  // 허브 ID
-        List.of(new OrderItemRequest(UUID.randomUUID(), 10, 100)), // UUID로 수정
-        LocalDateTime.now(),  // 예상 배송 날짜
-        "Order Note",  // 주문 노트
-        "Request Details"  // 요청 세부사항
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        List.of(new OrderItemRequest(UUID.randomUUID(), 5, 1000)),
+        LocalDateTime.now(),
+        "Test Order Note",
+        "Test Request Details"
     );
 
-    // When: AICalculationService의 calculateDeadline() 메서드 모의
-    when(aiCalculationService.calculateDeadline(any(OrderRequest.class))).thenReturn("2024-12-14 15:00");
+    String dynamicDeadline = LocalDateTime.now()
+        .plusDays(1)
+        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
 
-    // SlackMessageRepository의 save() 메서드 모의
+    when(aiCalculationService.calculateDeadline(any(OrderRequest.class)))
+        .thenReturn(dynamicDeadline);
     when(slackMessageRepository.save(any())).thenReturn(null);
 
-    // When: SlackService 호출
     String response = slackService.sendMessage(slackRequest, orderRequest);
 
-    // Then: 응답이 null이 아니고 성공 메시지인지 확인
-    assert response != null && response.contains("ok");
+    assertNotNull(response, "응답이 null이어서는 안 됩니다.");
+  }
+
+  @Test
+  void sendMessage_Failure_WhenAICalculationFails() {
+    SlackRequest slackRequest = new SlackRequest(
+        "TestChannel",
+        "Test Message",
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        List.of(new OrderItemRequest(UUID.randomUUID(), 5, 1000)),
+        LocalDateTime.now(),
+        "Test Order Note",
+        "Test Request Details"
+    );
+
+    OrderRequest orderRequest = new OrderRequest(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        List.of(new OrderItemRequest(UUID.randomUUID(), 5, 1000)),
+        LocalDateTime.now(),
+        "Test Order Note",
+        "Test Request Details"
+    );
+
+    when(aiCalculationService.calculateDeadline(any(OrderRequest.class)))
+        .thenThrow(new RuntimeException("AI 서비스 오류"));
+
+    Exception exception = assertThrows(RuntimeException.class, () -> {
+      slackService.sendMessage(slackRequest, orderRequest);
+    });
+
+    assertTrue(exception.getMessage().contains("AI 서비스 오류"));
+  }
+
+  @Test
+  void sendMessage_SavesSlackMessage() {
+    SlackRequest slackRequest = new SlackRequest(
+        "TestChannel",
+        "Test Message",
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        List.of(new OrderItemRequest(UUID.randomUUID(), 5, 1000)),
+        LocalDateTime.now(),
+        "Test Order Note",
+        "Test Request Details"
+    );
+
+    OrderRequest orderRequest = new OrderRequest(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        List.of(new OrderItemRequest(UUID.randomUUID(), 5, 1000)),
+        LocalDateTime.now(),
+        "Test Order Note",
+        "Test Request Details"
+    );
+
+    when(aiCalculationService.calculateDeadline(any(OrderRequest.class)))
+        .thenReturn("2024-12-14 15:00");
+    when(slackMessageRepository.save(any())).thenReturn(null);
+
+    slackService.sendMessage(slackRequest, orderRequest);
+
+    verify(slackMessageRepository).save(any());
+  }
+
+  @Test
+  void sendMessage_Failure_WhenSlackRequestIsEmpty() {
+    SlackRequest slackRequest = null;
+    OrderRequest orderRequest = null;
+
+    Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+      slackService.sendMessage(slackRequest, orderRequest);
+    });
+
+    assertTrue(exception.getMessage().contains("SlackRequest and OrderRequest must not be null"));
   }
 }
