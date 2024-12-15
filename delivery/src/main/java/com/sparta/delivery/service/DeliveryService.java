@@ -153,7 +153,7 @@ public class DeliveryService {
         // 사용자 권한 및 유효성 체크
 
         Delivery delivery = findById(deliveryId);
-        if(delivery == null) {
+        if(delivery == null || delivery.isDeleted()) {
             return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
         }
 
@@ -303,7 +303,7 @@ public class DeliveryService {
     public ApiResponse<Void> cancleDelivery(UUID deliveryId) {
         Delivery delivery = findById(deliveryId);
 
-        if(delivery == null) {
+        if(delivery == null || delivery.isDeleted()) {
             return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
         }
         if(delivery.getStatus() == DeliveryStatusEnum.DONE) {
@@ -324,7 +324,7 @@ public class DeliveryService {
     // 배송 삭제 요청
     public ApiResponse<Void> deleteDelivery(UUID deliveryId) {
         Delivery delivery = findById(deliveryId);
-        if(delivery == null) {
+        if(delivery == null || delivery.isDeleted()) {
             return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
         }
         if(delivery.getStatus() != DeliveryStatusEnum.DONE && delivery.getStatus() != DeliveryStatusEnum.HUB_WAIT) {
