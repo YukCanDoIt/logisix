@@ -37,7 +37,6 @@ public class DeliveryService {
     public ApiResponse<Void> createDelivery(CreateDeliveryRequest request) {
 
         try {
-            // 사용자 유효성 체크
 
             Delivery delivery = createDeliveryEntity(request);
 
@@ -54,6 +53,19 @@ public class DeliveryService {
 
             // 배송 시한 업데이트
             updateDispatchDeadline(delivery, deliveryRecordList, request);
+
+            // 배송 담당자 지정
+            DeliveryRecord firstRecord = deliveryRecordList.get(0);
+            Map<UUID, Double> distances = pathService.calculateDistancesFromHub(hubRoutes, firstRecord.getDepartures());
+            Deliverer firstDeliverer;
+            if (firstRecord.getSequence() == delivery.getTotalSequence()) {
+                // 허브-업체 배송인 경우
+                firstDeliverer = delivererService.assignCompanyDeliverer(firstRecord.getDepartures());
+            } else {
+                // 허브-허브 배송인 경우
+                firstDeliverer = delivererService.assignHubDeliverer(distances);
+            }
+            firstRecord.assignDeliverer(firstDeliverer);
 
             // 배송 데이터 저장
             saveDelivery(delivery, deliveryRecordList);
@@ -240,6 +252,7 @@ public class DeliveryService {
 
         if (deliveryRecord.getSequence() == 1) {
             delivery.setStartAt(now);
+            delivery.setCurrentSeq(1);
             if(delivery.getStatus() == DeliveryStatusEnum.HUB_ARRIVED) {
                 delivery.setStatus(DeliveryStatusEnum.IN_DELIVERY);
             } else {
