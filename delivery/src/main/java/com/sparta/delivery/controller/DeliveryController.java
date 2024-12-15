@@ -42,8 +42,8 @@ public class DeliveryController {
         return deliveryService.changeDeliverer(deliveryRecordId, request);
     }
 
-    // 배송 시작 요청
-    @PatchMapping("/{deliveryRecordId}/start")
+    // 배송 상태 업데이트 요청
+    @PatchMapping("/{deliveryRecordId}/status")
     public ApiResponse<Void> startDelivery(
             @PathVariable UUID deliveryRecordId,
             @RequestBody UpdateDeliveryStatusRequest request
