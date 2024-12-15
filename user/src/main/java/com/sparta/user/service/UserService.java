@@ -41,7 +41,7 @@ public class UserService {
     }
 
     // 회원가입
-    @Transactional
+    @Transactional(rollbackFor = {LogisixException.class})
     public UserResponse registerUser(UserCreateRequest request) {
         if (request.username() == null || request.username().trim().isEmpty()) {
             throw new LogisixException(ErrorCode.DUPLICATE_USERNAME);
@@ -158,7 +158,7 @@ public class UserService {
     }
 
     // 회원 정보 수정
-    @Transactional
+    @Transactional(rollbackFor = {LogisixException.class})
     public UserResponse updateUser(Long userId, UserUpdateRequest request, String requesterRole, String updatedBy) {
         if (!Role.MASTER.name().equals(requesterRole)) {
             throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
@@ -186,7 +186,7 @@ public class UserService {
     }
 
     // 회원 삭제
-    @Transactional
+    @Transactional(rollbackFor = {LogisixException.class})
     public void deleteUser(Long userId, String requesterRole, String deletedBy) {
         if (!Role.MASTER.name().equals(requesterRole)) {
             throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
