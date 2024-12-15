@@ -298,6 +298,28 @@ public class DeliveryService {
         });
     }
 
+    // 배송 취소 요청
+    @Transactional
+    public ApiResponse<Void> cancleDelivery(UUID deliveryId) {
+        Delivery delivery = findById(deliveryId);
+
+        if(delivery == null) {
+            return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
+        }
+        if(delivery.getStatus() == DeliveryStatusEnum.DONE) {
+            return new ApiResponse<>(400, "이미 완료된 배송입니다.", null);
+        }
+        if(delivery.getStatus() != DeliveryStatusEnum.HUB_WAIT) {
+            return new ApiResponse<>(400, "이미 진행중인 배송입니다", null);
+        }
+
+        delivery.setStatus(DeliveryStatusEnum.CANCELED);
+        List<DeliveryRecord> records = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(deliveryId);
+        records.forEach(DeliveryRecord::cancelDelivery);
+        deliveryRecordsJpaRepository.saveAll(records);
+        deliveryJpaRepository.save(delivery);
+        return new ApiResponse<>(200, "배송 취소 성공", null);
+    }
 
     private Delivery findById(UUID deliveryId){
         return deliveryJpaRepository.findByDeliveryId(deliveryId).orElse(null);
