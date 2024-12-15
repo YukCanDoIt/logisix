@@ -75,4 +75,25 @@ public class UserController {
             throw new LogisixException(ErrorCode.API_CALL_FAILED);
         }
     }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteUser(HttpServletRequest httpRequest) {
+        try {
+            // 헤더에서 사용자 정보 추출
+            Long userId = Long.parseLong(httpRequest.getHeader("X-User-Id"));
+            String deletedBy = httpRequest.getHeader("X-User-Name");
+
+            // 사용자 삭제
+            userService.deleteUser(userId, deletedBy);
+
+            return ResponseEntity.ok(ApiResponse.success("사용자 정보가 삭제되었습니다."));
+        } catch (NumberFormatException e) {
+            throw new LogisixException(ErrorCode.USER_NOT_FOUND);
+        } catch (LogisixException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new LogisixException(ErrorCode.API_CALL_FAILED);
+        }
+    }
+
 }
