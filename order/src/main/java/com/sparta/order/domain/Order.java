@@ -2,7 +2,6 @@ package com.sparta.order.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -13,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Order {
+public class Order extends BaseEntity {  // BaseEntity 상속
 
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
@@ -38,48 +37,16 @@ public class Order {
   @Column(name = "order_note")
   private String orderNote;
 
-  @Column(name = "request_details")  // 추가된 필드
-  private String requestDetails;  // 요청 세부사항
+  @Column(name = "request_details")
+  private String requestDetails;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false)
   private OrderStatus status;
 
-  @Column(name = "is_delivery_started", nullable = false)
-  @Builder.Default
-  private boolean isDeliveryStarted = false; // 배송 시작 여부
-
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private LocalDateTime createdAt;
-
   @Setter
-  @Column(name = "updated_at")
-  private LocalDateTime updatedAt;
-
-  @Setter
-  @Column(name = "delivery_id", nullable = true)
+  @Column(name = "delivery_id")
   private UUID deliveryId;
-
-  @Column(name = "is_delete", nullable = false)
-  @Builder.Default
-  private boolean isDelete = false;
-
-  public void markAsDeleted() {
-    this.isDelete = true;
-    this.updatedAt = LocalDateTime.now();
-  }
-
-  public void setStatus(OrderStatus status) {
-    if (isDeliveryStarted) {
-      throw new IllegalStateException("배송이 시작된 이후에는 상태를 변경할 수 없습니다.");
-    }
-    this.status = status;
-    this.updatedAt = LocalDateTime.now();
-  }
-
-  public void startDelivery() {
-    this.isDeliveryStarted = true;
-  }
 
   public void updateOrder(List<OrderItem> updatedItems, String orderNote, LocalDateTime expectedDeliveryDate) {
     this.orderItems.clear();
@@ -93,20 +60,6 @@ public class Order {
       this.expectedDeliveryDate = expectedDeliveryDate;
     }
 
-    this.updatedAt = LocalDateTime.now();
-  }
-
-  // isDeliveryStarted
-  public boolean getIsDeliveryStarted() {
-    return this.isDeliveryStarted;
-  }
-
-  // requestDetails와 orderNote
-  public String getOrderNote() {
-    return this.orderNote;
-  }
-
-  public String getRequestDetails() {
-    return this.requestDetails;
+    this.setUpdatedAt(LocalDateTime.now());
   }
 }
