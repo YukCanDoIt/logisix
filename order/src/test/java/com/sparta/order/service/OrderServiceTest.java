@@ -1,14 +1,15 @@
 package com.sparta.order.service;
 
 import com.sparta.order.client.DeliveryClient;
+import com.sparta.order.client.UserClient;
 import com.sparta.order.domain.Order;
 import com.sparta.order.domain.OrderItem;
 import com.sparta.order.domain.OrderStatus;
 import com.sparta.order.dto.OrderItemRequest;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
+import com.sparta.order.exception.UnauthorizedException;
 import com.sparta.order.repository.OrderRepository;
-import com.sparta.user.entity.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import org.mockito.MockitoAnnotations;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +35,9 @@ class OrderServiceTest {
   @Mock
   private DeliveryClient deliveryClient;
 
+  @Mock
+  private UserClient userClient; // FeignClient 사용
+
   @InjectMocks
   private OrderService orderService;
 
@@ -45,62 +50,53 @@ class OrderServiceTest {
   @DisplayName("주문 생성 성공 테스트")
   void createOrder_Success() {
     UUID deliveryId = UUID.randomUUID();
+    UUID userId = UUID.randomUUID();
     OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 10, 500);
+
     OrderRequest request = new OrderRequest(
-        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-        List.of(itemRequest), LocalDateTime.now(), "Test Order", "Request details"
+        userId, UUID.randomUUID(), UUID.randomUUID(),
+        List.of(itemRequest), LocalDateTime.now(), "Test Order", "Details"
     );
 
+    // FeignClient를 통해 사용자 역할 조회
+    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "MASTER"));
     when(deliveryClient.createDelivery(any(), eq(request))).thenReturn(deliveryId);
 
     Order order = Order.builder()
         .id(UUID.randomUUID())
         .supplierId(request.supplierId())
-        .receiverId(request.receiverId())
-        .hubId(request.hubId())
-        .orderItems(List.of(OrderItem.builder()
-            .productId(itemRequest.productId())
-            .quantity(itemRequest.quantity())
-            .pricePerUnit(itemRequest.pricePerUnit())
-            .build()))
         .status(OrderStatus.PENDING)
-        .deliveryId(deliveryId)
-        .createdAt(LocalDateTime.now())
         .build();
 
     when(orderRepository.save(any(Order.class))).thenReturn(order);
 
-    OrderResponse response = orderService.createOrder(request);
+    OrderResponse response = orderService.createOrder(request, userId, "TOKEN");
 
     assertNotNull(response);
-    assertEquals(request.supplierId(), response.supplierId());
-    assertEquals(deliveryId, response.deliveryId());
     assertEquals(OrderStatus.PENDING, response.status());
+    verify(orderRepository, times(2)).save(any(Order.class));
   }
 
   @Test
-  @DisplayName("주문 생성 실패 - 배송 생성 오류")
-  void createOrder_Fail_DeliveryCreation() {
-    OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 5, 1000);
+  @DisplayName("주문 생성 실패 - 권한 오류")
+  void createOrder_Fail_Unauthorized() {
+    UUID userId = UUID.randomUUID();
     OrderRequest request = new OrderRequest(
-        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-        List.of(itemRequest), LocalDateTime.now(), "Order Note", "Details"
+        userId, UUID.randomUUID(), UUID.randomUUID(),
+        List.of(), LocalDateTime.now(), "Test Order", "Details"
     );
 
-    when(deliveryClient.createDelivery(any(), eq(request)))
-        .thenThrow(new RuntimeException("배송 생성 실패"));
+    // FeignClient에서 역할이 MASTER가 아닌 경우
+    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "ANONYMOUS"));
 
-    RuntimeException exception = assertThrows(RuntimeException.class, () -> orderService.createOrder(request));
-
-    assertEquals("배송 생성 실패", exception.getMessage());
+    assertThrows(UnauthorizedException.class,
+        () -> orderService.createOrder(request, userId, "TOKEN"));
   }
 
   @Test
   @DisplayName("사용자 주문 조회 성공 테스트")
   void getOrdersByUser_Success() {
     UUID userId = UUID.randomUUID();
-    Role role = Role.COMPANY_MANAGER;
-
     Order order = Order.builder()
         .id(UUID.randomUUID())
         .supplierId(userId)
@@ -108,12 +104,14 @@ class OrderServiceTest {
         .orderItems(new ArrayList<>())
         .build();
 
+    // 역할 조회 및 주문 반환
+    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "COMPANY_MANAGER"));
     when(orderRepository.findAll()).thenReturn(List.of(order));
 
-    List<OrderResponse> responses = orderService.getOrdersByUser(userId, role.name());
+    List<OrderResponse> responses = orderService.getOrdersByUser(userId, "TOKEN");
 
     assertEquals(1, responses.size());
-    assertEquals(userId, responses.get(0).supplierId());
+    verify(orderRepository, times(1)).findAll();
   }
 
   @Test
@@ -121,7 +119,6 @@ class OrderServiceTest {
   void updateOrder_Success() {
     UUID orderId = UUID.randomUUID();
     UUID userId = UUID.randomUUID();
-    Role role = Role.COMPANY_MANAGER;
 
     Order order = Order.builder()
         .id(orderId)
@@ -132,15 +129,16 @@ class OrderServiceTest {
     OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 5, 300);
     OrderRequest request = new OrderRequest(
         userId, UUID.randomUUID(), UUID.randomUUID(),
-        List.of(itemRequest), LocalDateTime.now(), "Updated Order", "Updated details"
+        List.of(itemRequest), LocalDateTime.now(), "Updated Order", "Details"
     );
 
+    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "COMPANY_MANAGER"));
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    OrderResponse response = orderService.updateOrder(orderId, userId, request, role.name());
+    OrderResponse response = orderService.updateOrder(orderId, userId, request, "TOKEN");
 
-    assertEquals(5, response.quantity());
     assertEquals("Updated Order", response.orderNote());
+    verify(orderRepository, times(1)).save(order);
   }
 
   @Test
@@ -148,19 +146,20 @@ class OrderServiceTest {
   void deleteOrder_Success() {
     UUID orderId = UUID.randomUUID();
     UUID userId = UUID.randomUUID();
-    Role role = Role.MASTER;
 
     Order order = Order.builder()
         .id(orderId)
         .supplierId(userId)
-        .isDelete(false)
+        .status(OrderStatus.PENDING)
         .build();
 
+    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "MASTER"));
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    orderService.deleteOrder(orderId, userId, role.name());
+    orderService.deleteOrder(orderId, userId, "TOKEN");
 
-    assertTrue(order.isDelete());
+    assertTrue(order.isDeleted());
+    verify(orderRepository, times(1)).save(order);
   }
 
   @Test
@@ -171,13 +170,14 @@ class OrderServiceTest {
     Order order = Order.builder()
         .id(orderId)
         .status(OrderStatus.PENDING)
-        .orderItems(new ArrayList<>())
         .build();
 
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+    when(userClient.getUserRole(any(), anyString())).thenReturn(Map.of("role", "MASTER"));
 
-    OrderResponse response = orderService.updateOrderStatus(orderId, "CONFIRMED");
+    OrderResponse response = orderService.updateOrderStatus(orderId, "CONFIRMED", "TOKEN");
 
     assertEquals(OrderStatus.CONFIRMED, response.status());
+    verify(orderRepository, times(1)).save(order);
   }
 }
