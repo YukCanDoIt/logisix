@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.Map;
 
-@FeignClient(name = "user-service", url = "${USER_SERVICE_URL}")
+@FeignClient(name = "user-service")
 public interface UserClient {
 
   @GetMapping("/{user_id}/role")
