@@ -57,10 +57,10 @@ public class HubService {
     return HubResponse.from(hub);
   }
 
-  public Page<HubResponse> getHubs(int size, String keyword, Direction direction,
+  public Page<HubResponse> getHubs(int size, String keyword, Direction direction, String sortBy,
       Integer page
   ) {
-    Pageable pageable = PageRequest.of(page, size, direction);
+    Pageable pageable = PageRequest.of(page, size, direction, sortBy);
     return hubRepository.findByHubNameContaining(keyword, pageable)
         .map(HubResponse::from);
   }

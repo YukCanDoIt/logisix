@@ -42,14 +42,10 @@ public class HubRouteService {
     List<String> hubPairs = generateAllPairs(hubList);
     List<HubRoute> hubRouteList = new ArrayList<>();
 
-    System.out.println(hubPairs);
-
     for (String hubPair : hubPairs) {
       String[] result = hubPair.split("\\+");
       String hubName1 = result[0];
       String hubName2 = result[1];
-
-      System.out.println(hubName1 + " >>> " + hubName2);
 
       Optional<Hub> hubOptional1 = hubList.stream()
           .filter(hub -> hub.getHubName().equals(hubName1))
