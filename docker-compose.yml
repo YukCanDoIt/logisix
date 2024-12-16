@@ -40,82 +40,82 @@ services:
     networks:
       - app-network
 
-  core-service:
-    image: core-service:latest
-    ports:
-      - "19093:19093"
-    networks:
-      - app-network
-    depends_on:
-      - eureka-server
-      - core-redis
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://core-db:5433/coredb
-      REDIS_HOST: core-redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: systempass
-  core-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: coredb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: systempass
-    ports:
-      - "5433:5433"
-    networks:
-      - app-network
-  core-redis:
-    image: redis:latest
-    command: redis-server --requirepass systempass
-    ports:
-      - "6379:6379"
-    networks:
-      - app-network
-
-  delivery-service:
-    image: delivery-service:latest
-    ports:
-      - "19097:19097"
-    networks:
-      - app-network
-    depends_on:
-      - eureka-server
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://delivery-db:5437/deliverydb
-      REDIS_HOST: delivery-redis
-      REDIS_PORT: 6380
-      REDIS_PASSWORD: systempass
-  delivery-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: deliverydb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: systempass
-    ports:
-      - "5437:5432"
-    networks:
-      - app-network
-
-  slack-service:
-    image: slack-service:latest
-    ports:
-      - "19098:19098"
-    networks:
-      - app-network
-    depends_on:
-      - eureka-server
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://slack-db:5438/slackdb
-  slack-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: slackdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: systempass
-    ports:
-      - "5438:5438"
-    networks:
-      - app-network
+#  core-service:
+#    image: core-service:latest
+#    ports:
+#      - "19093:19093"
+#    networks:
+#      - app-network
+#    depends_on:
+#      - eureka-server
+#      - core-redis
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://core-db:5433/coredb
+#      REDIS_HOST: core-redis
+#      REDIS_PORT: 6379
+#      REDIS_PASSWORD: systempass
+#  core-db:
+#    image: postgres:13
+#    environment:
+#      POSTGRES_DB: coredb
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: systempass
+#    ports:
+#      - "5433:5433"
+#    networks:
+#      - app-network
+#  core-redis:
+#    image: redis:latest
+#    command: redis-server --requirepass systempass
+#    ports:
+#      - "6379:6379"
+#    networks:
+#      - app-network
+#
+#  delivery-service:
+#    image: delivery-service:latest
+#    ports:
+#      - "19097:19097"
+#    networks:
+#      - app-network
+#    depends_on:
+#      - eureka-server
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://delivery-db:5437/deliverydb
+#      REDIS_HOST: delivery-redis
+#      REDIS_PORT: 6380
+#      REDIS_PASSWORD: systempass
+#  delivery-db:
+#    image: postgres:13
+#    environment:
+#      POSTGRES_DB: deliverydb
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: systempass
+#    ports:
+#      - "5437:5432"
+#    networks:
+#      - app-network
+#
+#  slack-service:
+#    image: slack-service:latest
+#    ports:
+#      - "19098:19098"
+#    networks:
+#      - app-network
+#    depends_on:
+#      - eureka-server
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://slack-db:5438/slackdb
+#  slack-db:
+#    image: postgres:13
+#    environment:
+#      POSTGRES_DB: slackdb
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: systempass
+#    ports:
+#      - "5438:5438"
+#    networks:
+#      - app-network
       
   zipkin:
     image: openzipkin/zipkin

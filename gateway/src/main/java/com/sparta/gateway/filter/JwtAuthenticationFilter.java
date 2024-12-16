@@ -40,7 +40,7 @@ public class JwtAuthenticationFilter implements GlobalFilter {
         String path = exchange.getRequest().getURI().getPath();
 
         // 회원가입 및 로그인 요청은 인증 제외
-        if (path.startsWith("/users/sign-up") || path.startsWith("/users/sign-in")) {
+        if (path.startsWith("/api/v1/users/sign-up") || path.startsWith("/api/v1/users/sign-in")) {
             log.info("회원가입 또는 로그인 요청");
             ServerHttpRequest request = exchange.getRequest()
                     .mutate()

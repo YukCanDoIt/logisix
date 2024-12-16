@@ -43,7 +43,7 @@ public class AuthenticationHeaderFilter extends OncePerRequestFilter {
         }
 
         // 인증 필요 없는 경로 설정
-        if (path.startsWith("/users/sign-up") || path.startsWith("/users/sign-in")) {
+        if (path.startsWith("/api/v1/users/sign-up") || path.startsWith("/api/v1/users/sign-in")) {
             filterChain.doFilter(request, response);
             return;
         }
