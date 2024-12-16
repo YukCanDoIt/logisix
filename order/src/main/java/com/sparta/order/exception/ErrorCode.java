@@ -21,7 +21,10 @@ public enum ErrorCode {
   // 주문 관련 에러
   ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
   INVALID_ORDER_STATUS(HttpStatus.BAD_REQUEST, "유효하지 않은 주문 상태입니다."),
-  INVALID_ORDER_DATA(HttpStatus.BAD_REQUEST, "잘못된 주문 정보입니다.");
+  INVALID_ORDER_DATA(HttpStatus.BAD_REQUEST, "잘못된 주문 정보입니다."),
+
+  // 여기서 HttpStatus와 메시지를 지정
+  INVALID_REQUEST_DATA(HttpStatus.BAD_REQUEST, "유효하지 않은 요청 데이터입니다.");
 
   private final HttpStatus httpStatus;
   private final String message;
