@@ -1,8 +1,7 @@
 package com.sparta.slack.service;
 
-import com.sparta.order.dto.OrderItemRequest;
-import com.sparta.order.dto.OrderRequest;
 import com.sparta.slack.domain.SlackMessage;
+import com.sparta.slack.dto.OrderItemRequest;
 import com.sparta.slack.dto.SlackRequest;
 import com.sparta.slack.repository.SlackMessageRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,22 +9,24 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest(properties = {
-    "eureka.client.enable=false",
-    "spring.cloud.discovery.enabled=false"
+@SpringBootTest
+@TestPropertySource(properties = {
+    "eureka.client.enabled=false",
+    "spring.cloud.discovery.enabled=false",
+    "slack.webhook.url=https://hooks.slack.com/services/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"
 })
-@Transactional
 class SlackServiceTest {
 
   @Autowired
@@ -37,74 +38,74 @@ class SlackServiceTest {
   @MockBean
   private AICalculationService aiCalculationService;
 
+  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
   @BeforeEach
   void setUp() {
     slackMessageRepository.deleteAll();
   }
 
   @Test
-  void sendMessage_Success_WithDynamicTime() {
+  void sendMessage_WithNullSlackRequest_ShouldThrowException() {
+    // When & Then
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+      slackService.sendMessage(null);
+    });
+    assertThat(exception.getMessage()).isEqualTo("SlackRequest 객체가 null일 수 없습니다.");
+  }
+
+  @Test
+  void sendMessage_WithEmptyOrderItems_ShouldThrowException() {
+    // Given
+    SlackRequest slackRequest = new SlackRequest(
+        "TestChannel",
+        "Test Message",
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(),
+        List.of(), // 빈 리스트
+        LocalDateTime.now(),
+        "Order Note",
+        "Request Details"
+    );
+
+    // When & Then
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+      slackService.sendMessage(slackRequest);
+    });
+    assertThat(exception.getMessage()).isEqualTo("주문 항목이 비어 있습니다.");
+  }
+
+  @Test
+  void sendMessage_WithInvalidDeadline_ShouldThrowException() {
     // Given
     SlackRequest slackRequest = createSlackRequest();
-    OrderRequest orderRequest = createOrderRequest();
+    when(aiCalculationService.calculateDeadline(any(SlackRequest.class)))
+        .thenReturn("invalid-deadline"); // 잘못된 날짜 포맷
 
-    String dynamicDeadline = LocalDateTime.now().plusDays(1).toString();
-    when(aiCalculationService.calculateDeadline(any(OrderRequest.class)))
+    // When & Then
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+      slackService.sendMessage(slackRequest);
+    });
+    assertThat(exception.getMessage()).contains("유효하지 않은 날짜 형식");
+  }
+
+  @Test
+  void sendMessage_Success_WithDynamicDeadline() {
+    // Given
+    SlackRequest slackRequest = createSlackRequest();
+    String dynamicDeadline = LocalDateTime.now().plusDays(1).format(DATE_FORMATTER);
+
+    when(aiCalculationService.calculateDeadline(any(SlackRequest.class)))
         .thenReturn(dynamicDeadline);
 
     // When
-    String response = slackService.sendMessage(slackRequest, orderRequest);
+    String response = slackService.sendMessage(slackRequest);
 
     // Then
-    assertNotNull(response);
-    List<SlackMessage> savedMessages = slackMessageRepository.findAll();
-    assertThat(savedMessages).hasSize(1);
-  }
-
-  @Test
-  void sendMessage_Failure_WhenAICalculationFails() {
-    // Given
-    SlackRequest slackRequest = createSlackRequest();
-    OrderRequest orderRequest = createOrderRequest();
-
-    when(aiCalculationService.calculateDeadline(any(OrderRequest.class)))
-        .thenThrow(new RuntimeException("AI 서비스 오류"));
-
-    // When & Then
-    RuntimeException exception = assertThrows(RuntimeException.class, () ->
-        slackService.sendMessage(slackRequest, orderRequest)
-    );
-    assertTrue(exception.getMessage().contains("AI 서비스 오류"));
-  }
-
-  @Test
-  void sendMessage_SavesSlackMessage() {
-    // Given
-    SlackRequest slackRequest = createSlackRequest();
-    OrderRequest orderRequest = createOrderRequest();
-
-    when(aiCalculationService.calculateDeadline(any(OrderRequest.class)))
-        .thenReturn("2024-12-14 15:00");
-
-    // When
-    slackService.sendMessage(slackRequest, orderRequest);
-
-    // Then
-    List<SlackMessage> savedMessages = slackMessageRepository.findAll();
-    assertThat(savedMessages).hasSize(1);
-
-    SlackMessage savedMessage = savedMessages.get(0);
-    assertThat(savedMessage.getChannel()).isEqualTo(slackRequest.channel());
-    assertThat(savedMessage.getMessage()).contains("2024-12-14 15:00");
-  }
-
-  @Test
-  void sendMessage_Failure_WhenSlackRequestIsEmpty() {
-    // When & Then
-    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-        slackService.sendMessage(null, null)
-    );
-    assertTrue(exception.getMessage().contains("SlackRequest and OrderRequest must not be null"));
+    assertThat(response).isNotNull();
+    SlackMessage savedMessage = slackMessageRepository.findAll().get(0);
+    assertThat(savedMessage.getTimestamp()).isEqualTo(LocalDateTime.parse(dynamicDeadline, DATE_FORMATTER));
   }
 
   private SlackRequest createSlackRequest() {
@@ -114,18 +115,6 @@ class SlackServiceTest {
         UUID.randomUUID().toString(),
         UUID.randomUUID().toString(),
         UUID.randomUUID().toString(),
-        List.of(new OrderItemRequest(UUID.randomUUID(), 2, 5000)),
-        LocalDateTime.now(),
-        "Order Note",
-        "Request Details"
-    );
-  }
-
-  private OrderRequest createOrderRequest() {
-    return new OrderRequest(
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        UUID.randomUUID(),
         List.of(new OrderItemRequest(UUID.randomUUID(), 2, 5000)),
         LocalDateTime.now(),
         "Order Note",
