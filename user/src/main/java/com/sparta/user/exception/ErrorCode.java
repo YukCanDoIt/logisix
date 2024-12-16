@@ -26,6 +26,7 @@ public enum ErrorCode {
     INVALID_USER_ID(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자 ID입니다."),
 
     // 요청 처리 에러
+    INVALID_PAGE_SIZE(HttpStatus.BAD_REQUEST, "허용되지 않는 페이지 사이즈 설정입니다."),
     MISSING_REQUIRED_HEADER(HttpStatus.BAD_REQUEST, "필수 헤더가 누락되었습니다."),
     INVALID_REQUEST_PATH(HttpStatus.BAD_REQUEST, "유효하지 않은 요청 경로입니다."),
     INVALID_REQUEST_PARAMETER(HttpStatus.BAD_REQUEST, "유효하지 않은 요청 파라미터입니다."),

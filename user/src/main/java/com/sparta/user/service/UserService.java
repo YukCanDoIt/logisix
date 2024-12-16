@@ -115,6 +115,11 @@ public class UserService {
     public PageResponse<UserListResponse> listUsers(String username, String slackAccount, String requesterRole, Long requesterId, Pageable pageable) throws LogisixException {
         QUser qUser = QUser.user;
 
+        List<Integer> allowedPageSizes = List.of(10, 30, 50);
+        if (!allowedPageSizes.contains(pageable.getPageSize())) {
+            throw new LogisixException(ErrorCode.INVALID_PAGE_SIZE);
+        }
+
         BooleanExpression condition = isNotDeleted(qUser);
 
         if (username != null && !username.isBlank()) {
