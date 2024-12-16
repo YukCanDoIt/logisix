@@ -2,6 +2,7 @@ package com.sparta.order.controller;
 
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
+import com.sparta.order.dto.OrderItemRequest;
 import com.sparta.order.service.OrderService;
 import com.sparta.order.client.UserClient;
 import org.springframework.http.ResponseEntity;
@@ -30,11 +31,19 @@ public class OrderController {
       @RequestHeader("X-User-ID") UUID userId,
       @RequestHeader("Authorization") String token) {
 
-    // 사용자 역할 조회 (FeignClient 사용)
     String role = getUserRole(userId, token);
-
     OrderResponse orderResponse = orderService.createOrder(orderRequest, userId, role);
     return ResponseEntity.ok(orderResponse);
+  }
+
+  // 주문 검증 추가
+  @PostMapping("/validate")
+  public ResponseEntity<Map<String, Object>> validateOrder(@RequestBody List<OrderItemRequest> orderItems) {
+    // 주문 검증 로직: orderItems가 비어있지 않고 모든 값이 유효한지 확인
+    boolean isValid = orderItems != null && !orderItems.isEmpty()
+        && orderItems.stream().allMatch(item -> item.productId() != null && item.quantity() > 0 && item.pricePerUnit() > 0);
+
+    return ResponseEntity.ok(Map.of("status", isValid ? "SUCCESS" : "FAIL"));
   }
 
   // 사용자 주문 조회
@@ -86,9 +95,9 @@ public class OrderController {
     return ResponseEntity.ok(response);
   }
 
-  // 사용자 역할 조회 메서드 (FeignClient 사용)
+  // 사용자 역할 조회 메서드
   private String getUserRole(UUID userId, String token) {
     Map<String, String> response = userClient.getUserRole(userId, token);
-    return response.get("role"); // role 값 반환
+    return response.get("role");
   }
 }
