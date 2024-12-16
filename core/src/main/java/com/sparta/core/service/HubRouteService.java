@@ -5,6 +5,8 @@ import com.sparta.core.dto.HubRouteResponse;
 import com.sparta.core.dto.KakaoMapResponse;
 import com.sparta.core.entity.Hub;
 import com.sparta.core.entity.HubRoute;
+import com.sparta.core.exception.ErrorCode;
+import com.sparta.core.exception.LogisixException;
 import com.sparta.core.repository.HubRepository;
 import com.sparta.core.repository.HubRouteRedisRepository;
 import com.sparta.core.repository.HubRouteRepository;
@@ -86,7 +88,7 @@ public class HubRouteService {
         departureHubId);
 
     if (hubRoute == null) {
-      throw new NotFoundException();
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     return HubRouteResponse.from(hubRoute);

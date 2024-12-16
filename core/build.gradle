@@ -27,6 +27,14 @@ ext {
     set('springCloudVersion', "2024.0.0")
 }
 
+bootJar {
+    enabled = true
+}
+
+jar {
+    enabled = false
+}
+
 dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     implementation 'org.hibernate.orm:hibernate-spatial:6.4.4.Final'

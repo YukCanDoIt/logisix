@@ -18,14 +18,14 @@ public abstract class Base {
   @ColumnDefault("false")
   private boolean isDeleted;
 
-//  @Column(name = "created_by", nullable = false, length = 100)
-//  private String createdBy;
+  @Column(name = "created_by", nullable = false, length = 100)
+  private String createdBy;
 
-//  @Column(name = "updated_by", length = 100)
-//  private String updatedBy;
+  @Column(name = "updated_by", length = 100)
+  private String updatedBy;
 
-//  @Column(name = "deleted_by", length = 100)
-//  private String deletedBy;
+  @Column(name = "deleted_by", length = 100)
+  private String deletedBy;
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
@@ -41,19 +41,19 @@ public abstract class Base {
   // 생성
   public void createBase(String username) {
     this.createdAt = LocalDateTime.now();
-//    this.createdBy = username;
+    this.createdBy = username;
   }
 
   // 수정
   public void updateBase(String username) {
     this.updatedAt = LocalDateTime.now();
-//    this.updatedBy = username;
+    this.updatedBy = username;
   }
 
   // 삭제
   public void deleteBase(String username) {
     this.isDeleted = true;
     this.deletedAt = LocalDateTime.now();
-//    this.deletedBy = username;
+    this.deletedBy = username;
   }
 }

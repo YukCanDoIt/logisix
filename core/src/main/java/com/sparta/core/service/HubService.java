@@ -3,8 +3,8 @@ package com.sparta.core.service;
 import com.sparta.core.dto.HubRequest;
 import com.sparta.core.dto.HubResponse;
 import com.sparta.core.entity.Hub;
-import com.sparta.core.exception.ApiException;
 import com.sparta.core.exception.ErrorCode;
+import com.sparta.core.exception.LogisixException;
 import com.sparta.core.repository.HubRepository;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,7 +35,7 @@ public class HubService {
         hubRepository.findByHubName(hubRequest.hubName()));
 
     if (hubOptional.isPresent()) {
-      throw new ApiException(ErrorCode.DUPLICATE_VALUE);
+      throw new LogisixException(ErrorCode.DUPLICATE_VALUE);
     }
 
     Coordinate coordinate = new Coordinate(hubRequest.longitude().doubleValue(),
@@ -48,7 +48,7 @@ public class HubService {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
-      throw new IllegalArgumentException("Hub not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Hub hub = hubOptional.get();
@@ -68,7 +68,7 @@ public class HubService {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
-      throw new IllegalArgumentException("Hub not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Hub fetchedHub = hubOptional.get();
@@ -85,7 +85,7 @@ public class HubService {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
-      throw new IllegalArgumentException("Hub not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     // TODO: Soft Delete 적용 필요
