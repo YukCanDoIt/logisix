@@ -1,6 +1,8 @@
-package com.sparta.delivery.common;
+package com.sparta.user.domain;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
@@ -39,17 +41,15 @@ public abstract class BaseEntity {
     private LocalDateTime deletedAt;
 
     // 생성
-    @PrePersist
-    public void createBase() {
+    public void createBase(String username) {
         this.createdAt = LocalDateTime.now();
-        this.createdBy = "temp_username";
+        this.createdBy = username;
     }
 
     // 수정
-    @PreUpdate
-    public void updateBase() {
+    public void updateBase(String username) {
         this.updatedAt =  LocalDateTime.now();
-        this.updatedBy = "temp_username";
+        this.updatedBy = username;
     }
 
     // 삭제
