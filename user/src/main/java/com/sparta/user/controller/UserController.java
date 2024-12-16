@@ -26,6 +26,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -95,6 +97,12 @@ public class UserController {
             })
             Pageable pageable,
             HttpServletRequest httpRequest) {
+
+        List<Integer> allowedPageSizes = List.of(10, 30, 50);
+        if (!allowedPageSizes.contains(pageable.getPageSize())) {
+            throw new LogisixException(ErrorCode.INVALID_PAGE_SIZE);
+        }
+
         String requesterRole = (String) httpRequest.getAttribute("role");
         Long requesterId = (Long) httpRequest.getAttribute("userId");
 
