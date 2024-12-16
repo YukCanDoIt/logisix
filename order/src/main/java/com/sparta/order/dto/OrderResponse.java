@@ -18,26 +18,11 @@ public record OrderResponse(
     String requestDetails
 ) {
 
-  // JSON 응답에 포함되도록 @JsonProperty 추가
+  // JSON 직렬화를 위한 전체 수량 계산
   @JsonProperty("quantity")
   public int quantity() {
     return orderItems.stream()
-        .mapToInt(OrderItemResponse::quantity)  // quantity 합산
+        .mapToInt(OrderItemResponse::quantity)
         .sum();
-  }
-
-  @JsonProperty("deliveryId")
-  public UUID deliveryId() {
-    return this.deliveryId;
-  }
-
-  @JsonProperty("orderNote")
-  public String orderNote() {
-    return this.orderNote;
-  }
-
-  @JsonProperty("requestDetails")
-  public String requestDetails() {
-    return this.requestDetails;
   }
 }

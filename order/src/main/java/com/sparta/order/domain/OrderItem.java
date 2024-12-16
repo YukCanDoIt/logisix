@@ -1,5 +1,6 @@
 package com.sparta.order.domain;
 
+import com.sparta.order.dto.OrderItemRequest; // OrderItemRequest DTO import
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,4 +31,8 @@ public class OrderItem {
   public OrderItem(UUID uuid, int i, int i1) {
   }
 
+  // OrderItem -> OrderItemRequest 변환 메서드
+  public OrderItemRequest toRequest() {
+    return new OrderItemRequest(this.productId, this.quantity, this.pricePerUnit);
+  }
 }

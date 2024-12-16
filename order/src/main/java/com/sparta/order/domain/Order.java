@@ -3,6 +3,7 @@ package com.sparta.order.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,7 +30,8 @@ public class Order extends BaseEntity {
 
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinColumn(name = "order_id")
-  private List<OrderItem> orderItems;
+  @Builder.Default
+  private List<OrderItem> orderItems = new ArrayList<>(); // NullPointerException 방지
 
   @Column(name = "expected_delivery_date")
   private LocalDateTime expectedDeliveryDate;
@@ -48,16 +50,12 @@ public class Order extends BaseEntity {
   @Column(name = "delivery_id")
   private UUID deliveryId;
 
-  // **isDeliveryStarted Getter**
-  public boolean getIsDeliveryStarted() {
-    return super.isDeliveryStarted();
-  }
-
-  // **setStatus 메서드 추가**
+  // 주문 상태 변경 메서드
   public void setStatus(OrderStatus status) {
     this.status = status;
   }
 
+  // 주문 정보 업데이트
   public void updateOrder(List<OrderItem> updatedItems, String orderNote, LocalDateTime expectedDeliveryDate) {
     this.orderItems.clear();
     this.orderItems.addAll(updatedItems);
