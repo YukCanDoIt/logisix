@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Order extends BaseEntity {  // BaseEntity 상속
+public class Order extends BaseEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
@@ -47,6 +47,16 @@ public class Order extends BaseEntity {  // BaseEntity 상속
   @Setter
   @Column(name = "delivery_id")
   private UUID deliveryId;
+
+  // **isDeliveryStarted Getter**
+  public boolean getIsDeliveryStarted() {
+    return super.isDeliveryStarted();
+  }
+
+  // **setStatus 메서드 추가**
+  public void setStatus(OrderStatus status) {
+    this.status = status;
+  }
 
   public void updateOrder(List<OrderItem> updatedItems, String orderNote, LocalDateTime expectedDeliveryDate) {
     this.orderItems.clear();
