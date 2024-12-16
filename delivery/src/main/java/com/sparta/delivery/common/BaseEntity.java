@@ -38,20 +38,18 @@ public abstract class BaseEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    private String tempUsername = "temp_username";
-
     // 생성
     @PrePersist
     public void createBase() {
         this.createdAt = LocalDateTime.now();
-        this.createdBy = tempUsername;
+        this.createdBy = "temp_username";
     }
 
     // 수정
     @PreUpdate
     public void updateBase() {
         this.updatedAt =  LocalDateTime.now();
-        this.updatedBy = tempUsername;
+        this.updatedBy = "temp_username";
     }
 
     // 삭제

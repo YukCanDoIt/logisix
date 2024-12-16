@@ -2,7 +2,7 @@ package com.sparta.delivery.dto;
 
 import com.sparta.delivery.entity.DelivererStatusEnum;
 import com.sparta.delivery.entity.DelivererTypeEnum;
-import com.sparta.delivery.entity.Deliverers;
+import com.sparta.delivery.entity.Deliverer;
 
 import java.util.UUID;
 
@@ -13,12 +13,12 @@ public record GetDelivererResponse(
     DelivererStatusEnum status
 ) {
 
-    public static GetDelivererResponse from(Deliverers deliverers) {
+    public static GetDelivererResponse from(Deliverer deliverer) {
         return new GetDelivererResponse(
-                deliverers.getDelivererId(),
-                deliverers.getHubId(),
-                deliverers.getType(),
-                deliverers.getStatus()
+                deliverer.getDelivererId(),
+                deliverer.getHubId(),
+                deliverer.getType(),
+                deliverer.getStatus()
         );
     }
 }
