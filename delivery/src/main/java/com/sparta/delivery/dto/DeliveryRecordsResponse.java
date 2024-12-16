@@ -1,7 +1,7 @@
 package com.sparta.delivery.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.sparta.delivery.entity.DeliveryRecords;
+import com.sparta.delivery.entity.DeliveryRecord;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -23,18 +23,18 @@ public record DeliveryRecordsResponse(
         String actualTime,
         Long delivererId
 ) {
-    public static DeliveryRecordsResponse from(DeliveryRecords deliveryRecords) {
+    public static DeliveryRecordsResponse from(DeliveryRecord deliveryRecord) {
         return new DeliveryRecordsResponse(
-                deliveryRecords.getDeliveryRecordId(),
-                deliveryRecords.getDepartures(),
-                deliveryRecords.getArrival(),
-                deliveryRecords.getSequence(),
-                deliveryRecords.getStatus().name(),
-                deliveryRecords.getEstimatedDist(),
-                formatDuration(deliveryRecords.getEstimatedTime()),
-                deliveryRecords.getActualDist(),
-                formatDuration(deliveryRecords.getActualTime()),
-                deliveryRecords.getDeliverer() != null ? deliveryRecords.getDeliverer().getDelivererId() : null
+                deliveryRecord.getDeliveryRecordId(),
+                deliveryRecord.getDepartures(),
+                deliveryRecord.getArrival(),
+                deliveryRecord.getSequence(),
+                deliveryRecord.getStatus().name(),
+                deliveryRecord.getEstimatedDist(),
+                formatDuration(deliveryRecord.getEstimatedTime()),
+                deliveryRecord.getActualDist(),
+                formatDuration(deliveryRecord.getActualTime()),
+                deliveryRecord.getDeliverer() != null ? deliveryRecord.getDeliverer().getDelivererId() : null
         );
     }
 

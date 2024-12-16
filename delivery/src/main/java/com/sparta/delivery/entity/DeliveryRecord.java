@@ -11,6 +11,7 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity(name = "p_delivery_records")
@@ -18,7 +19,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Getter
-public class DeliveryRecords extends BaseEntity {
+public class DeliveryRecord extends BaseEntity {
 
     @Id
     @UuidGenerator
@@ -39,6 +40,10 @@ public class DeliveryRecords extends BaseEntity {
     @Column(nullable = false)
     private Integer sequence;
 
+    private LocalDateTime startAt;
+
+    private LocalDateTime endAt;
+
     @Column(nullable = false)
     @Convert(converter = DurationToIntervalConverter.class)
     private Duration estimatedTime;
@@ -53,21 +58,21 @@ public class DeliveryRecords extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "delivery_id", nullable = false)
-    private Deliveries delivery;
+    private Delivery delivery;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deliverer_id")
-    private Deliverers deliverer;
+    private Deliverer deliverer;
 
-    public static DeliveryRecords create(
+    public static DeliveryRecord create(
             UUID departures,
             UUID arrival,
             Integer sequence,
             Duration estimatedTime,
             BigDecimal estimatedDist,
-            Deliveries delivery
+            Delivery delivery
     ) {
-        return DeliveryRecords.builder()
+        return DeliveryRecord.builder()
                 .departures(departures)
                 .arrival(arrival)
                 .status(DeliveryRecordsStatusEnum.WAIT)
@@ -78,7 +83,23 @@ public class DeliveryRecords extends BaseEntity {
                 .build();
     }
 
-    public void changeDeliverer(Deliverers deliverer) {
+    public void changeDeliverer(Deliverer deliverer) {
+        this.deliverer = deliverer;
+    }
+
+    public void startDelivery(LocalDateTime startAt) {
+        this.status = DeliveryRecordsStatusEnum.IN_PROGRESS;
+        this.startAt = startAt;
+    }
+
+    public void endDelivery(LocalDateTime endAt, BigDecimal actudalDist) {
+        this.status = DeliveryRecordsStatusEnum.COMPLETED;
+        this.actualDist = actudalDist;
+        this.endAt = endAt;
+        this.actualTime = Duration.between(startAt, endAt);
+    }
+
+    public void assignDeliverer(Deliverer deliverer) {
         this.deliverer = deliverer;
     }
 

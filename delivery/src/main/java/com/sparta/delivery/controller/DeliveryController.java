@@ -4,6 +4,7 @@ import com.sparta.delivery.common.ApiResponse;
 import com.sparta.delivery.dto.CreateDeliveryRequest;
 import com.sparta.delivery.dto.GetDeliveryResponse;
 import com.sparta.delivery.dto.ChangeDelivererRequest;
+import com.sparta.delivery.dto.UpdateDeliveryStatusRequest;
 import com.sparta.delivery.service.DeliveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +40,15 @@ public class DeliveryController {
             @RequestBody ChangeDelivererRequest request
     ){
         return deliveryService.changeDeliverer(deliveryRecordId, request);
+    }
+
+    // 배송 상태 업데이트 요청
+    @PatchMapping("/{deliveryRecordId}/status")
+    public ApiResponse<Void> startDelivery(
+            @PathVariable UUID deliveryRecordId,
+            @RequestBody UpdateDeliveryStatusRequest request
+            ) {
+        return deliveryService.updateDeliveryStatus(deliveryRecordId, request);
     }
 
 }

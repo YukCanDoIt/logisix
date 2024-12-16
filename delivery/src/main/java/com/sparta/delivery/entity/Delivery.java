@@ -16,7 +16,7 @@ import java.util.UUID;
 @Builder
 @Getter
 @Setter
-public class Deliveries extends BaseEntity {
+public class Delivery extends BaseEntity {
 
     @Id
     @GeneratedValue
@@ -43,6 +43,10 @@ public class Deliveries extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime dispatchDeadline;
 
+    private LocalDateTime startAt;
+
+    private LocalDateTime endAt;
+
     private Integer totalSequence;
 
     private Integer currentSeq;
@@ -54,9 +58,9 @@ public class Deliveries extends BaseEntity {
     private UUID companyId;
 
     @OneToMany(mappedBy = "delivery", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<DeliveryRecords> deliveryRecords = new ArrayList<>();
+    private List<DeliveryRecord> deliveryRecords = new ArrayList<>();
 
-    public static Deliveries create(
+    public static Delivery create(
             UUID orderId,
             UUID sourceHubId,
             UUID companyId,
@@ -64,7 +68,7 @@ public class Deliveries extends BaseEntity {
             String recipient,
             String recipientSlackAccount
     ) {
-        return Deliveries.builder()
+        return Delivery.builder()
                 .orderId(orderId)
                 .sourceHubId(sourceHubId)
                 .companyId(companyId)
@@ -73,6 +77,18 @@ public class Deliveries extends BaseEntity {
                 .recipient(recipient)
                 .recipientSlackAccount(recipientSlackAccount)
                 .build();
+    }
+
+    public void setFirstDeliveryStatus(LocalDateTime startAt) {
+        this.startAt = startAt;
+        this.status = DeliveryStatusEnum.HUB_MOVE;
+        this.currentSeq = 1;
+    }
+
+    public void setHubArrivedDeliveryStatus(LocalDateTime endAt) {
+        this.endAt = endAt;
+        this.status = DeliveryStatusEnum.HUB_ARRIVED;
+        this.currentSeq = this.getTotalSequence()-2;
     }
 
 }

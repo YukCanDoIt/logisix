@@ -11,14 +11,12 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +24,7 @@ public class DeliveryService {
 
     private final PathService pathService;
     private final KakaoMapService kakaoMapService;
+    private final DelivererService delivererService;
     private final DeliverersJpaRepository deliverersJpaRepository;
     private final DeliveriesJpaRepository deliveryJpaRepository;
     private final DeliveryRecordsJpaRepository deliveryRecordsJpaRepository;
@@ -34,12 +33,13 @@ public class DeliveryService {
 
 
     // 배송 생성
+    @Transactional
     public ApiResponse<Void> createDelivery(CreateDeliveryRequest request) {
 
         try {
             // 사용자 유효성 체크
 
-            Deliveries delivery = createDeliveryEntity(request);
+            Delivery delivery = createDeliveryEntity(request);
 
             // Redis에서 경로 데이터 가져오기
             List<HubRoute> hubRoutes = pathService.getHubRoutes();
@@ -47,16 +47,16 @@ public class DeliveryService {
             // 없을 경우 DB에서 가져오기
 
             // 최단 경로 생성
-            List<DeliveryRecords> deliveryRecordsList = createDeliveryRecords(request, hubRoutes, delivery);
+            List<DeliveryRecord> deliveryRecordList = createDeliveryRecords(request, hubRoutes, delivery);
 
             // 마지막 허브에서 업체까지의 경로 추가
-            addFinalDeliveryRecord(deliveryRecordsList, delivery);
+            addFinalDeliveryRecord(deliveryRecordList, delivery);
 
             // 배송 시한 업데이트
-            updateDispatchDeadline(delivery, deliveryRecordsList, request);
+            updateDispatchDeadline(delivery, deliveryRecordList, request);
 
             // 배송 데이터 저장
-            saveDelivery(delivery, deliveryRecordsList);
+            saveDelivery(delivery, deliveryRecordList);
 
             // 슬랙 메시지 발송
 
@@ -67,8 +67,8 @@ public class DeliveryService {
         }
     }
 
-    private Deliveries createDeliveryEntity(CreateDeliveryRequest request) {
-        return Deliveries.create(
+    private Delivery createDeliveryEntity(CreateDeliveryRequest request) {
+        return Delivery.create(
                 request.orderId(),
                 request.sourceHubId(),
                 request.destinationId(),
@@ -78,9 +78,9 @@ public class DeliveryService {
         );
     }
 
-    private List<DeliveryRecords> createDeliveryRecords(CreateDeliveryRequest request, List<HubRoute> hubRoutes, Deliveries delivery) {
+    private List<DeliveryRecord> createDeliveryRecords(CreateDeliveryRequest request, List<HubRoute> hubRoutes, Delivery delivery) {
         List<UUID> paths = pathService.findShortestPath(hubRoutes, request.sourceHubId(), request.destinationId());
-        List<DeliveryRecords> deliveryRecordsList = new ArrayList<>();
+        List<DeliveryRecord> deliveryRecordList = new ArrayList<>();
 
         for (int i = 0; i < paths.size() - 1; i++) {
             UUID departureHubId = paths.get(i);
@@ -88,7 +88,7 @@ public class DeliveryService {
 
             HubRoute hubRoute = pathService.findHubRoute(hubRoutes, departureHubId, arrivalHubId);
 
-            DeliveryRecords deliveryRecord = DeliveryRecords.create(
+            DeliveryRecord deliveryRecord = DeliveryRecord.create(
                     departureHubId,
                     arrivalHubId,
                     i + 1,
@@ -96,12 +96,12 @@ public class DeliveryService {
                     BigDecimal.valueOf(hubRoute.estimatedDistance()),
                     delivery
             );
-            deliveryRecordsList.add(deliveryRecord);
+            deliveryRecordList.add(deliveryRecord);
         }
-        return deliveryRecordsList;
+        return deliveryRecordList;
     }
 
-    private void addFinalDeliveryRecord(List<DeliveryRecords> deliveryRecordsList, Deliveries delivery) {
+    private void addFinalDeliveryRecord(List<DeliveryRecord> deliveryRecordList, Delivery delivery) {
         Point lastHubLocation = new Point(BigDecimal.valueOf(126.977969), BigDecimal.valueOf(37.566535));
         Point companyLocation = new Point(BigDecimal.valueOf(127.1058342), BigDecimal.valueOf(37.359708));
 
@@ -110,15 +110,15 @@ public class DeliveryService {
                     if (response != null && response.routes().length > 0) {
                         BigDecimal distance = response.routes()[0].summary().distance();
                         BigDecimal duration = response.routes()[0].summary().duration();
-                        DeliveryRecords finalRecord = DeliveryRecords.create(
-                                deliveryRecordsList.get(deliveryRecordsList.size() - 1).getArrival(),
+                        DeliveryRecord finalRecord = DeliveryRecord.create(
+                                deliveryRecordList.get(deliveryRecordList.size() - 1).getArrival(),
                                 delivery.getCompanyId(),
-                                deliveryRecordsList.size() + 1,
+                                deliveryRecordList.size() + 1,
                                 Duration.ofMillis(duration.longValue()),
                                 distance,
                                 delivery
                         );
-                        deliveryRecordsList.add(finalRecord);
+                        deliveryRecordList.add(finalRecord);
                     } else {
                         logger.warn("유효한 경로가 없음");
                     }
@@ -128,9 +128,9 @@ public class DeliveryService {
                 });
     }
 
-    private void updateDispatchDeadline(Deliveries delivery, List<DeliveryRecords> deliveryRecordsList, CreateDeliveryRequest request) {
-        Duration totalEstimatedTime = deliveryRecordsList.stream()
-                .map(DeliveryRecords::getEstimatedTime)
+    private void updateDispatchDeadline(Delivery delivery, List<DeliveryRecord> deliveryRecordList, CreateDeliveryRequest request) {
+        Duration totalEstimatedTime = deliveryRecordList.stream()
+                .map(DeliveryRecord::getEstimatedTime)
                 .reduce(Duration.ZERO, Duration::plus);
 
         LocalDateTime dispatchDeadline = request.deliverDate().minus(totalEstimatedTime);
@@ -138,25 +138,28 @@ public class DeliveryService {
         delivery.setDispatchDeadline(dispatchDeadline);
     }
 
-    private void saveDelivery(Deliveries delivery, List<DeliveryRecords> deliveryRecordsList) {
-        delivery.setTotalSequence(deliveryRecordsList.size());
+    private void saveDelivery(Delivery delivery, List<DeliveryRecord> deliveryRecordList) {
+        delivery.setTotalSequence(deliveryRecordList.size());
+        if(deliveryRecordList.size() == 1) {
+            delivery.setStatus(DeliveryStatusEnum.HUB_ARRIVED);
+        }
         delivery.setCurrentSeq(0);
         deliveryJpaRepository.save(delivery);
-        deliveryRecordsJpaRepository.saveAll(deliveryRecordsList);
+        deliveryRecordsJpaRepository.saveAll(deliveryRecordList);
     }
 
     // 배송 단건 조회
     public ApiResponse<GetDeliveryResponse> getDelivery(UUID deliveryId) {
         // 사용자 권한 및 유효성 체크
 
-        Optional<Deliveries> delivery = deliveryJpaRepository.findByDeliveryId(deliveryId);
-        if(delivery.isEmpty()) {
+        Delivery delivery = findById(deliveryId);
+        if(delivery == null) {
             return new ApiResponse<>(400, "해당하는 배송 정보가 없습니다", null);
         }
 
-        List<DeliveryRecords> deliveryRecordsList = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(deliveryId);
+        List<DeliveryRecord> deliveryRecordList = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(deliveryId);
 
-        GetDeliveryResponse response = GetDeliveryResponse.create(delivery.get(), deliveryRecordsList);
+        GetDeliveryResponse response = GetDeliveryResponse.create(delivery, deliveryRecordList);
 
         return new ApiResponse<>(200, "배송 정보 조회 성공", response);
     }
@@ -167,11 +170,11 @@ public class DeliveryService {
 
         try {
             // 배송 경로 정보 확인
-            DeliveryRecords existRecord = deliveryRecordsJpaRepository.findById(deliveryRecordId)
+            DeliveryRecord existRecord = deliveryRecordsJpaRepository.findById(deliveryRecordId)
                     .orElseThrow(() -> new IllegalArgumentException("해당하는 배송 경로 정보가 없습니다"));
 
             // 배송 담당자 정보 확인
-            Deliverers existDeliverer = deliverersJpaRepository.findById(request.delivererId())
+            Deliverer existDeliverer = deliverersJpaRepository.findById(request.delivererId())
                     .orElseThrow(() -> new IllegalArgumentException("해당하는 배송 담당자 정보가 없습니다"));
 
             // 배송 담당자 상태 확인
@@ -201,4 +204,103 @@ public class DeliveryService {
         }
 
     }
+
+    // 배송 상태 업데이트
+    @Transactional
+    public ApiResponse<Void> updateDeliveryStatus(UUID deliveryRecordId, UpdateDeliveryStatusRequest request) {
+        DeliveryRecord deliveryRecord = deliveryRecordsJpaRepository.findById(deliveryRecordId)
+                .orElseThrow(() -> new IllegalArgumentException("해당하는 배송 경로 정보가 없습니다."));
+
+        try {
+            handleDeliveryStatusUpdate(deliveryRecord, request);
+            return new ApiResponse<>(200, "배송 상태 업데이트 완료", null);
+        } catch (Exception e) {
+            logger.error("Error updating delivery status: {}", e.getMessage(), e);
+            return new ApiResponse<>(500, "배송 상태 업데이트 실패", null);
+        }
+    }
+
+    private void handleDeliveryStatusUpdate(DeliveryRecord deliveryRecord, UpdateDeliveryStatusRequest request) {
+        Delivery delivery = deliveryRecord.getDelivery();
+        if (deliveryRecord.getStatus() == DeliveryRecordsStatusEnum.WAIT) {
+            startDelivery(deliveryRecord, delivery);
+        } else if (deliveryRecord.getStatus() == DeliveryRecordsStatusEnum.IN_PROGRESS) {
+            completeDelivery(deliveryRecord, delivery, request);
+        } else {
+            throw new IllegalArgumentException("이미 완료된 배송 경로입니다.");
+        }
+
+        updateDeliveryStatusIfNeeded(delivery);
+        assignNextDelivererIfNeeded(deliveryRecord);
+    }
+
+    private void startDelivery(DeliveryRecord deliveryRecord, Delivery delivery) {
+        LocalDateTime now = LocalDateTime.now();
+        deliveryRecord.startDelivery(now);
+
+        if (deliveryRecord.getSequence() == 1) {
+            delivery.setStartAt(now);
+            if(delivery.getStatus() == DeliveryStatusEnum.HUB_ARRIVED) {
+                delivery.setStatus(DeliveryStatusEnum.IN_DELIVERY);
+            } else {
+                delivery.setStatus(DeliveryStatusEnum.HUB_MOVE);
+            }
+        }
+        deliveryRecordsJpaRepository.save(deliveryRecord);
+    }
+
+    private void completeDelivery(DeliveryRecord deliveryRecord, Delivery delivery, UpdateDeliveryStatusRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+        deliveryRecord.endDelivery(now, request.actualDist());
+
+        if (deliveryRecord.getSequence() == delivery.getTotalSequence()) {
+            delivery.setStatus(DeliveryStatusEnum.DONE);
+        } else {
+            if(delivery.getTotalSequence() - deliveryRecord.getSequence() == 1) {
+                delivery.setStatus(DeliveryStatusEnum.HUB_ARRIVED);
+            }
+            delivery.setCurrentSeq(deliveryRecord.getSequence() +1 );
+        }
+        deliveryRecordsJpaRepository.save(deliveryRecord);
+    }
+
+    private void updateDeliveryStatusIfNeeded(Delivery delivery) {
+        boolean allCompleted = deliveryRecordsJpaRepository.findAllByDelivery_DeliveryId(delivery.getDeliveryId())
+                .stream()
+                .allMatch(deliveryRecord -> deliveryRecord.getStatus() == DeliveryRecordsStatusEnum.COMPLETED);
+
+        if (allCompleted) {
+            delivery.setStatus(DeliveryStatusEnum.DONE);
+        }
+        deliveryJpaRepository.save(delivery);
+    }
+
+    private void assignNextDelivererIfNeeded(DeliveryRecord currentRecord) {
+        int nextSequence = currentRecord.getSequence() + 1;
+        Optional<DeliveryRecord> nextRecordOpt = deliveryRecordsJpaRepository
+                .findByDeliveryIdAndSequence(currentRecord.getDelivery().getDeliveryId(), nextSequence);
+
+        nextRecordOpt.ifPresent(nextRecord -> {
+            UUID departureHubId = nextRecord.getDepartures();
+            Deliverer nextDeliverer;
+
+            if (nextSequence == nextRecord.getDelivery().getTotalSequence()) {
+                // 허브-업체 배송
+                nextDeliverer = delivererService.assignCompanyDeliverer(departureHubId);
+            } else {
+                // 허브-허브 배송
+                Map<UUID, Double> distances = pathService.calculateDistancesFromHub(pathService.getHubRoutes(), departureHubId);
+                nextDeliverer = delivererService.assignHubDeliverer(distances);
+            }
+
+            nextRecord.assignDeliverer(nextDeliverer);
+            deliveryRecordsJpaRepository.save(nextRecord);
+        });
+    }
+
+
+    private Delivery findById(UUID deliveryId){
+        return deliveryJpaRepository.findByDeliveryId(deliveryId).orElse(null);
+    }
+
 }

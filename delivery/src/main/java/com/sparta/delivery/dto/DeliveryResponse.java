@@ -1,6 +1,6 @@
 package com.sparta.delivery.dto;
 
-import com.sparta.delivery.entity.Deliveries;
+import com.sparta.delivery.entity.Delivery;
 import com.sparta.delivery.entity.DeliveryStatusEnum;
 
 import java.time.LocalDateTime;
@@ -18,7 +18,7 @@ public record DeliveryResponse(
         LocalDateTime dispatchDeadline
 ) {
 
-    public static DeliveryResponse from(Deliveries delivery) {
+    public static DeliveryResponse from(Delivery delivery) {
         return new DeliveryResponse(
                 delivery.getOrderId(),
                 delivery.getStatus(),

@@ -16,7 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Getter
-public class Deliverers extends BaseEntity {
+public class Deliverer extends BaseEntity {
 
     @Id
     private Long delivererId;
@@ -33,10 +33,10 @@ public class Deliverers extends BaseEntity {
     private DelivererTypeEnum type;
 
     @OneToMany(mappedBy = "deliverer")
-    private List<DeliveryRecords> deliveryRecords = new ArrayList<>();
+    private List<DeliveryRecord> deliveryRecords = new ArrayList<>();
 
-    public static Deliverers create(Long delivererId, UUID hubId, DelivererTypeEnum type) {
-        return Deliverers.builder()
+    public static Deliverer create(Long delivererId, UUID hubId, DelivererTypeEnum type) {
+        return Deliverer.builder()
                 .delivererId(delivererId)
                 .hubId(hubId)
                 .type(type)
