@@ -1,6 +1,6 @@
 rootProject.name = 'order'
 
-include ':order', ':delivery', ':user', ':common', ':server', ':core', ':gateway', ':slack'
+include ':order', ':delivery', ':user', ':common'
 
 // 각 모듈 경로 설정
 project(':user').projectDir = file('../user')       // user 모듈 경로 설정
