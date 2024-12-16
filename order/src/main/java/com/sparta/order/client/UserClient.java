@@ -12,6 +12,6 @@ import java.util.Map;
 public interface UserClient {
 
   @GetMapping("/{user_id}/role")
-  Map<String, String> getUserRole(@PathVariable("user_id") UUID userId,
+  Map<String, String> getUserRole(@PathVariable("user_id") long userId,
       @RequestHeader("Authorization") String token);
 }
