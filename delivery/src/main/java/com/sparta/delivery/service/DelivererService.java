@@ -70,7 +70,9 @@ public class DelivererService {
             if (deliverer.getStatus() == DelivererStatusEnum.MOVING) {
                 return new ApiResponse<>(400, "배송 중인 배송 담당자는 삭제할 수 없습니다", null);
             }
-            deliverersJpaRepository.delete(deliverer);
+
+            deliverer.deleteBase("temp_username");
+            deliverersJpaRepository.save(deliverer);
             return new ApiResponse<>(200, "배송 담당자 삭제 완료", null);
         } else {
             return new ApiResponse<>(400, "해당하는 배송 담당자가 없습니다", null);

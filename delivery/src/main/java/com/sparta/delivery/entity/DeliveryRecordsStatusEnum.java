@@ -4,5 +4,6 @@ public enum DeliveryRecordsStatusEnum {
 
     WAIT,
     IN_PROGRESS,
-    COMPLETED
+    COMPLETED,
+    CANCELED
 }

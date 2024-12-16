@@ -87,6 +87,10 @@ public class DeliveryRecord extends BaseEntity {
         this.deliverer = deliverer;
     }
 
+    public void cancelDelivery() {
+        this.status = DeliveryRecordsStatusEnum.CANCELED;
+    }
+
     public void startDelivery(LocalDateTime startAt) {
         this.status = DeliveryRecordsStatusEnum.IN_PROGRESS;
         this.startAt = startAt;

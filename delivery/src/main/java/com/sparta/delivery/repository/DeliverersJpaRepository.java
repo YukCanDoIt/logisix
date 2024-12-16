@@ -12,9 +12,9 @@ import java.util.UUID;
 public interface DeliverersJpaRepository extends JpaRepository<Deliverer, Long> {
     Optional<Deliverer> findByDelivererId(Long delivererId);
 
-    @Query("SELECT d FROM p_deliverers d WHERE d.hubId = :hubId AND d.type = 'COMPANY'")
+    @Query("SELECT d FROM p_deliverers d WHERE d.hubId = :hubId AND d.type = 'COMPANY' AND d.isDeleted = false")
     List<Deliverer> findCompanyDeliverersByHub(@Param("hubId") UUID hubId);
 
-    @Query("SELECT d FROM p_deliverers d WHERE d.type = 'HUB'")
+    @Query("SELECT d FROM p_deliverers d WHERE d.type = 'HUB' AND d.isDeleted = false")
     List<Deliverer> findHubDeliverers();
 }

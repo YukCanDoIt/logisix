@@ -51,4 +51,20 @@ public class DeliveryController {
         return deliveryService.updateDeliveryStatus(deliveryRecordId, request);
     }
 
+    // 배송 취소 요청
+    @PatchMapping("/{deliveryId}/cancel")
+    public ApiResponse<Void> cancleDelivery(
+            @PathVariable UUID deliveryId
+    ) {
+        return deliveryService.cancleDelivery(deliveryId);
+    }
+
+    // 배송 삭제 요청
+    @DeleteMapping("/{deliveryId}")
+    public ApiResponse<Void> deleteDelivery(
+            @PathVariable UUID deliveryId
+    ){
+        return deliveryService.deleteDelivery(deliveryId);
+    }
+
 }
