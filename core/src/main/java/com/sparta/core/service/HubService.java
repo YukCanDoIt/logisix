@@ -3,7 +3,7 @@ package com.sparta.core.service;
 import com.sparta.core.dto.HubRequest;
 import com.sparta.core.dto.HubResponse;
 import com.sparta.core.entity.Hub;
-import com.sparta.core.exception.ApiException;
+import com.sparta.core.exception.LogisixException;
 import com.sparta.core.exception.ErrorCode;
 import com.sparta.core.repository.HubRepository;
 import java.util.Optional;
@@ -21,10 +21,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 @Service
 public class HubService {
 
+  private final HubRouteService hubRouteService;
   private final HubRepository hubRepository;
   private final GeometryFactory geometryFactory;
 
-  public HubService(HubRepository hubRepository) {
+  public HubService(HubRouteService hubRouteService, HubRepository hubRepository) {
+    this.hubRouteService = hubRouteService;
     this.hubRepository = hubRepository;
     this.geometryFactory = new GeometryFactory();
   }
@@ -35,7 +37,7 @@ public class HubService {
         hubRepository.findByHubName(hubRequest.hubName()));
 
     if (hubOptional.isPresent()) {
-      throw new ApiException(ErrorCode.DUPLICATE_VALUE);
+      throw new LogisixException(ErrorCode.DUPLICATE_VALUE);
     }
 
     Coordinate coordinate = new Coordinate(hubRequest.longitude().doubleValue(),
@@ -48,17 +50,17 @@ public class HubService {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
-      throw new IllegalArgumentException("Hub not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Hub hub = hubOptional.get();
     return HubResponse.from(hub);
   }
 
-  public Page<HubResponse> getHubs(int size, String keyword, Direction direction,
+  public Page<HubResponse> getHubs(int size, String keyword, Direction direction, String sortBy,
       Integer page
   ) {
-    Pageable pageable = PageRequest.of(page, size, direction);
+    Pageable pageable = PageRequest.of(page, size, direction, sortBy);
     return hubRepository.findByHubNameContaining(keyword, pageable)
         .map(HubResponse::from);
   }
@@ -68,7 +70,7 @@ public class HubService {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
-      throw new IllegalArgumentException("Hub not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Hub fetchedHub = hubOptional.get();
@@ -78,6 +80,7 @@ public class HubService {
     Hub hub = new Hub(hubRequest, geometryFactory.createPoint(coordinate));
 
     fetchedHub.update(hub);
+    hubRouteService.createHubRoutes();
   }
 
   @DeleteMapping
@@ -85,7 +88,7 @@ public class HubService {
     Optional<Hub> hubOptional = hubRepository.findById(hubId);
 
     if (hubOptional.isEmpty()) {
-      throw new IllegalArgumentException("Hub not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     // TODO: Soft Delete 적용 필요

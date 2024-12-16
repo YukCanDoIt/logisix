@@ -4,6 +4,7 @@ import com.sparta.core.dto.HubRouteRequest;
 import com.sparta.core.dto.HubRouteResponse;
 import com.sparta.core.response.ApiResponse;
 import com.sparta.core.service.HubRouteService;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -31,5 +32,11 @@ public class HubRouteController {
       @RequestParam UUID departureHubId) {
     HubRouteResponse hubRouteResponse = hubRouteService.getHubRoute(arrivalHubId, departureHubId);
     return ResponseEntity.ok(ApiResponse.success(hubRouteResponse));
+  }
+
+  @GetMapping("/list")
+  public ResponseEntity getHubRoutes() {
+    List<HubRouteResponse> hubRouteResponseList = hubRouteService.getHubRoutes();
+    return ResponseEntity.ok(ApiResponse.success(hubRouteResponseList));
   }
 }

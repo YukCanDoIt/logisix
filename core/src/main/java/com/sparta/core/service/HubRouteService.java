@@ -1,17 +1,27 @@
 package com.sparta.core.service;
 
+import com.sparta.core.dto.HubResponse;
 import com.sparta.core.dto.HubRouteRequest;
 import com.sparta.core.dto.HubRouteResponse;
 import com.sparta.core.dto.KakaoMapResponse;
 import com.sparta.core.entity.Hub;
 import com.sparta.core.entity.HubRoute;
+import com.sparta.core.exception.ErrorCode;
+import com.sparta.core.exception.LogisixException;
 import com.sparta.core.repository.HubRepository;
 import com.sparta.core.repository.HubRouteRedisRepository;
 import com.sparta.core.repository.HubRouteRepository;
 import jakarta.ws.rs.NotFoundException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,58 +37,87 @@ public class HubRouteService {
   private final HubRouteRedisRepository hubRouteRedisRepository;
 
   public void createHubRoutes() {
-    // (1) hubTable에서 모든 hubId를 가져와서, 2개씩 조합한다.
-    // (2) 조합된 hubId끼리 카카오 길찾기 API를 호출한다.
-    // (3) 예상 시간, 예상 거리를 hubRoute 테이블에 저장한다.
-    // (4) 래디스에 캐시 저장한다.
-
     List<Hub> hubList = hubRepository.findAll();
-    List<List<Hub>> hubPairs = generateAllPairs(hubList);
+
+    List<String> hubPairs = generateAllPairs(hubList);
     List<HubRoute> hubRouteList = new ArrayList<>();
 
-    for (List<Hub> pair : hubPairs) {
-      if (pair.size() == 2) {
-        Hub hub1 = pair.get(0);
-        Hub hub2 = pair.get(1);
+    for (String hubPair : hubPairs) {
+      String[] result = hubPair.split("\\+");
+      String hubName1 = result[0];
+      String hubName2 = result[1];
 
-        BigDecimal originLongitude = hub1.getLongitude();
-        BigDecimal originLatitude = hub1.getLatitude();
-        BigDecimal destinationLongitude = hub2.getLongitude();
-        BigDecimal destinationLatitude = hub2.getLatitude();
+      Optional<Hub> hubOptional1 = hubList.stream()
+          .filter(hub -> hub.getHubName().equals(hubName1))
+          .findFirst();
 
-        ResponseEntity<KakaoMapResponse> response = kakaoMapService.getDirections(
-            originLongitude, originLatitude, destinationLongitude, destinationLatitude
-        );
+      Optional<Hub> hubOptional2 = hubList.stream()
+          .filter(hub -> hub.getHubName().equals(hubName2))
+          .findFirst();
 
-        KakaoMapResponse kakaoResponse = response.getBody();
-        if (kakaoResponse != null && kakaoResponse.routes() != null
-            && kakaoResponse.routes().length > 0) {
-          KakaoMapResponse.Route route = kakaoResponse.routes()[0];
-          HubRouteRequest hubRouteRequest = new HubRouteRequest(hub1.getHubId(), hub2.getHubId(),
-              route.summary().distance(), route.summary().duration());
-
-          HubRoute hubRoute = new HubRoute(hubRouteRequest);
-          hubRouteList.add(hubRoute);
-          hubRouteRepository.save(hubRoute);
-        }
+      if (hubOptional1.isEmpty() || hubOptional2.isEmpty()) {
+        System.out.println(hubName1 + " + " + hubName2);
+        throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
       }
+
+      Hub hub1 = hubOptional1.get();
+      Hub hub2 = hubOptional2.get();
+
+      BigDecimal originLongitude = hub1.getLongitude();
+      BigDecimal originLatitude = hub1.getLatitude();
+      BigDecimal destinationLongitude = hub2.getLongitude();
+      BigDecimal destinationLatitude = hub2.getLatitude();
+
+      ResponseEntity<KakaoMapResponse> response = kakaoMapService.getDirections(
+          originLongitude, originLatitude, destinationLongitude, destinationLatitude
+      );
+      KakaoMapResponse kakaoResponse = response.getBody();
+      if (kakaoResponse != null && kakaoResponse.routes() != null
+          && kakaoResponse.routes().length > 0) {
+        KakaoMapResponse.Route route = kakaoResponse.routes()[0];
+
+        HubRouteRequest hubRouteRequest = new HubRouteRequest(hub1.getHubId(), hub2.getHubId(),
+            route.summary().distance(), route.summary().duration());
+        HubRoute hubRoute = new HubRoute(hubRouteRequest);
+
+        hubRouteList.add(hubRoute);
+        hubRouteRepository.save(hubRoute);
+      }
+
     }
     hubRouteRedisRepository.saveAll(hubRouteList);
   }
 
-  public List<List<Hub>> generateAllPairs(List<Hub> hubs) {
-    List<List<Hub>> pairs = new ArrayList<>();
+  /* 허브 매핑 정보에 따른 출발-도착 허브 리스트 GET 메서드*/
+  public List<String> generateAllPairs(List<Hub> hubs) {
+    Map<String, List<String>> hubConnections = new HashMap<>();
 
-    for (int i = 0; i < hubs.size(); i++) {
-      for (int j = i + 1; j < hubs.size(); j++) {
-        List<Hub> pair = new ArrayList<>();
-        pair.add(hubs.get(i));
-        pair.add(hubs.get(j));
-        pairs.add(pair);
+    /* Hub To Hub 연결 정보 */
+    hubConnections.put("경기남부 센터",
+        Arrays.asList("경기북부 센터", "서울특별시 센터", "인천광역시 센터", "강원특별자치도 센터", "경상북도 센터",
+            "대전광역시 센터", "대구광역시 센터"));
+    hubConnections.put("대전광역시 센터",
+        Arrays.asList("충청남도 센터", "충청북도 센터", "세종특별자치시 센터", "전북특별자치도 센터", "광주광역시 센터", "전라남도 센터",
+            "경기남부 센터",
+            "대구광역시 센터"));
+    hubConnections.put("대구광역시 센터",
+        Arrays.asList("경상북도 센터", "경상남도 센터", "부산광역시 센터", "울산광역시 센터", "경기남부 센터", "대전광역시 센터"));
+    hubConnections.put("경상북도 센터", Arrays.asList("경기남부 센터", "대구광역시 센터"));
+
+    Set<String> uniqueConnections = new LinkedHashSet<>();
+
+    for (Map.Entry<String, List<String>> entry : hubConnections.entrySet()) {
+      String hub1 = entry.getKey();
+      for (String hub2 : entry.getValue()) {
+        String connection1 = hub1 + "+" + hub2;
+        String connection2 = hub2 + "+" + hub1;
+
+        uniqueConnections.add(connection1);
+        uniqueConnections.add(connection2);
       }
     }
 
-    return pairs;
+    return new ArrayList<>(uniqueConnections);
   }
 
   public HubRouteResponse getHubRoute(UUID arrivalHubId, UUID departureHubId) {
@@ -86,9 +125,14 @@ public class HubRouteService {
         departureHubId);
 
     if (hubRoute == null) {
-      throw new NotFoundException();
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     return HubRouteResponse.from(hubRoute);
+  }
+
+  public List<HubRouteResponse> getHubRoutes() {
+    return hubRouteRepository.findAll().stream()
+        .map(HubRouteResponse::from).toList();
   }
 }

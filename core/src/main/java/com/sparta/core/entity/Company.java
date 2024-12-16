@@ -58,6 +58,7 @@ public class Company extends Base {
     this.hubId = companyRequest.hubId();
     this.type = companyRequest.companyType();
     this.location = location;
+    this.createBase("tempUser");
   }
 
   public void update(Company company) {
