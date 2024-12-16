@@ -3,7 +3,7 @@ package com.sparta.core.service;
 import com.sparta.core.dto.CompanyRequest;
 import com.sparta.core.dto.CompanyResponse;
 import com.sparta.core.entity.Company;
-import com.sparta.core.exception.ApiException;
+import com.sparta.core.exception.LogisixException;
 import com.sparta.core.exception.ErrorCode;
 import com.sparta.core.repository.CompanyRepository;
 import jakarta.validation.Valid;
@@ -35,7 +35,7 @@ public class CompanyService {
         companyRepository.findByCompanyName(companyRequest.companyName()));
 
     if (optionalCompany.isPresent()) {
-      throw new ApiException(ErrorCode.DUPLICATE_VALUE);
+      throw new LogisixException(ErrorCode.DUPLICATE_VALUE);
     }
 
     Coordinate coordinate = new Coordinate(companyRequest.longitude().doubleValue(),
@@ -48,7 +48,7 @@ public class CompanyService {
     Optional<Company> companyOptional = companyRepository.findById(companyId);
 
     if (companyOptional.isEmpty()) {
-      throw new IllegalArgumentException("Company not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Company company = companyOptional.get();
@@ -67,7 +67,7 @@ public class CompanyService {
     Optional<Company> companyOptional = companyRepository.findById(companyId);
 
     if (companyOptional.isEmpty()) {
-      throw new IllegalArgumentException("Company not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Company fetchedCompany = companyOptional.get();
@@ -85,7 +85,7 @@ public class CompanyService {
     Optional<Company> companyOptional = companyRepository.findById(companyId);
 
     if (companyOptional.isEmpty()) {
-      throw new IllegalArgumentException("Company not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     // TODO: Soft Delete 적용 필요

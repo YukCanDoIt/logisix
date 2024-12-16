@@ -47,6 +47,7 @@ public class Hub extends Base {
     this.longitude = hubRequest.longitude();
     this.address = hubRequest.address();
     this.location = location;
+    this.createBase("tempUser");
   }
 
   public void update(Hub hub) {

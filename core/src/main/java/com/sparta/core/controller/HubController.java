@@ -43,7 +43,7 @@ public class HubController {
   public ResponseEntity getHubs(
       @RequestParam int size,
       @RequestParam String keyword,
-      // @RequestParam(defaultValue = "createdAt") String sortBy,
+      @RequestParam(defaultValue = "createdAt") String sortBy,
       @RequestParam(defaultValue = "DESC") Direction direction,
       @RequestParam Integer page
   ) {

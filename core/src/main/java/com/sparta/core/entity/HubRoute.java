@@ -38,6 +38,7 @@ public class HubRoute extends Base {
     this.departureHubId = hubRouteRequest.departureHubId();
     this.estimatedDistance = hubRouteRequest.estimatedDistance();
     this.estimatedTime = hubRouteRequest.estimatedTime();
+    this.createBase("tempUser");
   }
 
 }

@@ -28,8 +28,8 @@ ext {
 }
 
 dependencies {
-	implementation project(':user')  // 'user' 모듈 의존성
-	implementation project(':common') // 'common' 모듈 의존성
+//	implementation project(':user')  // 'user' 모듈 의존성
+//	implementation project(':common') // 'common' 모듈 의존성
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
