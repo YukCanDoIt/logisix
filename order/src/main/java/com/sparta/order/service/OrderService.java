@@ -33,13 +33,13 @@ public class OrderService {
 
   // 주문 생성
   @Transactional
-  public OrderResponse createOrder(OrderRequest orderRequest, UUID userId, String token) {
-    String role = getUserRole(userId, token);
+  public OrderResponse createOrder(OrderRequest orderRequest, UUID userId, String role) {
+    validateOrderRequest(orderRequest);
+
     if (!"MASTER".equals(role)) {
       throw new UnauthorizedException("권한이 없습니다. 주문 생성은 MASTER만 가능합니다.");
     }
 
-    // 주문 생성
     Order order = Order.builder()
         .supplierId(orderRequest.supplierId())
         .receiverId(orderRequest.receiverId())
@@ -54,7 +54,6 @@ public class OrderService {
 
     orderRepository.save(order);
 
-    // 배송 생성
     UUID deliveryId = deliveryClient.createDelivery(order.getId(), orderRequest);
     order.setDeliveryId(deliveryId);
     order.setUpdatedAt(LocalDateTime.now());
@@ -63,11 +62,24 @@ public class OrderService {
     return mapToOrderResponse(order);
   }
 
+  // 주문 삭제
+  @Transactional
+  public void deleteOrder(UUID id, UUID userId, String role) {
+    Order order = orderRepository.findById(id)
+        .filter(o -> !o.isDeleted())
+        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+    if (!"MASTER".equals(role)) {
+      throw new UnauthorizedException("삭제 권한이 없습니다.");
+    }
+
+    order.markAsDeleted();
+    orderRepository.save(order);
+  }
+
   // 사용자별 주문 조회
   @Transactional(readOnly = true)
-  public List<OrderResponse> getOrdersByUser(UUID userId, String token) {
-    String role = getUserRole(userId, token);
-
+  public List<OrderResponse> getOrdersByUser(UUID userId, String role) {
     return orderRepository.findAll().stream()
         .filter(order -> isAccessible(userId, role, order) && !order.isDeleted())
         .map(this::mapToOrderResponse)
@@ -76,8 +88,7 @@ public class OrderService {
 
   // 주문 수정
   @Transactional
-  public OrderResponse updateOrder(UUID id, UUID userId, OrderRequest orderRequest, String token) {
-    String role = getUserRole(userId, token);
+  public OrderResponse updateOrder(UUID id, UUID userId, OrderRequest orderRequest, String role) {
     Order order = orderRepository.findById(id)
         .filter(o -> isAccessible(userId, role, o) && !o.isDeleted())
         .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
@@ -93,25 +104,9 @@ public class OrderService {
     return mapToOrderResponse(order);
   }
 
-  // 주문 삭제
-  @Transactional
-  public void deleteOrder(UUID id, UUID userId, String token) {
-    String role = getUserRole(userId, token);
-    Order order = orderRepository.findById(id)
-        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
-
-    if (!"MASTER".equals(role)) {
-      throw new UnauthorizedException("삭제 권한이 없습니다.");
-    }
-
-    order.markAsDeleted();
-    orderRepository.save(order);
-  }
-
   // 주문 상태 변경
   @Transactional
-  public OrderResponse updateOrderStatus(UUID id, String newStatus, String token) {
-    String role = getUserRole(id, token);
+  public OrderResponse updateOrderStatus(UUID id, String newStatus, String role) {
     Order order = orderRepository.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
@@ -126,9 +121,13 @@ public class OrderService {
     return mapToOrderResponse(order);
   }
 
-  // 사용자 역할 조회 메서드
-  private String getUserRole(UUID userId, String token) {
-    return userClient.getUserRole(userId, token).get("role");
+  // 필수 필드 검증
+  private void validateOrderRequest(OrderRequest orderRequest) {
+    if (orderRequest.supplierId() == null || orderRequest.receiverId() == null
+        || orderRequest.hubId() == null || orderRequest.orderItems() == null
+        || orderRequest.orderItems().isEmpty()) {
+      throw new IllegalArgumentException("필수 필드가 누락되었습니다.");
+    }
   }
 
   // 접근 권한 검증

@@ -1,7 +1,6 @@
 package com.sparta.slack.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sparta.order.dto.OrderRequest;
 import com.sparta.slack.dto.SlackRequest;
 import com.sparta.slack.service.SlackService;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,8 +44,7 @@ class SlackControllerTest {
   void sendSlackMessage_Success() throws Exception {
     // Given
     SlackRequest request = createSlackRequest();
-
-    when(slackService.sendMessage(any(SlackRequest.class), any(OrderRequest.class)))
+    when(slackService.sendMessage(any(SlackRequest.class)))
         .thenReturn("Message sent successfully!");
 
     // When & Then
@@ -68,32 +66,17 @@ class SlackControllerTest {
         .andExpect(status().isBadRequest());
   }
 
-  @Test
-  void sendSlackMessage_InternalServerError() throws Exception {
-    // Given
-    SlackRequest request = createSlackRequest();
-
-    when(slackService.sendMessage(any(SlackRequest.class), any(OrderRequest.class)))
-        .thenThrow(new RuntimeException("Slack message failed!"));
-
-    // When & Then
-    mockMvc.perform(post("/api/slack/send")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
-        .andExpect(status().isInternalServerError());
-  }
-
   private SlackRequest createSlackRequest() {
     return new SlackRequest(
-        "general",
-        "Test message",
+        "TestChannel",
+        "Test Message",
         UUID.randomUUID().toString(),
         UUID.randomUUID().toString(),
         UUID.randomUUID().toString(),
-        List.of(),
+        List.of(new com.sparta.slack.dto.OrderItemRequest(UUID.randomUUID(), 2, 5000)),
         LocalDateTime.now(),
-        "Test note",
-        "Test details"
+        "Test Note",
+        "Test Details"
     );
   }
 }
