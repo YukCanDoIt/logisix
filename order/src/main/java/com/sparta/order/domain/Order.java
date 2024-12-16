@@ -1,29 +1,18 @@
 package com.sparta.order.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "p_order")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Order {
+public class Order extends BaseEntity {  // BaseEntity 상속
 
   @Id
   @GeneratedValue(strategy = GenerationType.AUTO)
@@ -35,35 +24,42 @@ public class Order {
   @Column(name = "receiver_id", nullable = false)
   private UUID receiverId;
 
-  @Column(name = "product_id", nullable = false)
-  private UUID productId;
+  @Column(name = "hub_id", nullable = false)
+  private UUID hubId;
 
-  @Column(name = "quantity", nullable = false)
-  private int quantity;
+  @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+  @JoinColumn(name = "order_id")
+  private List<OrderItem> orderItems;
 
-  @Column(name = "delivery_id", nullable = false)
-  private UUID deliveryId;
+  @Column(name = "expected_delivery_date")
+  private LocalDateTime expectedDeliveryDate;
+
+  @Column(name = "order_note")
+  private String orderNote;
 
   @Column(name = "request_details")
   private String requestDetails;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false)
-  private OrderStatus status = OrderStatus.PENDING;
+  private OrderStatus status;
 
-  @Builder.Default // 초기화 값 유지
-  @Column(name = "is_delete", nullable = false)
-  private boolean isDelete = false;
+  @Setter
+  @Column(name = "delivery_id")
+  private UUID deliveryId;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private LocalDateTime createdAt;
+  public void updateOrder(List<OrderItem> updatedItems, String orderNote, LocalDateTime expectedDeliveryDate) {
+    this.orderItems.clear();
+    this.orderItems.addAll(updatedItems);
 
-  @Column(name = "updated_at")
-  private LocalDateTime updatedAt;
+    if (orderNote != null) {
+      this.orderNote = orderNote;
+    }
 
-  // 논리적 삭제 처리 메서드
-  public void markAsDeleted() {
-    this.isDelete = true;
+    if (expectedDeliveryDate != null) {
+      this.expectedDeliveryDate = expectedDeliveryDate;
+    }
+
+    this.setUpdatedAt(LocalDateTime.now());
   }
-
 }
