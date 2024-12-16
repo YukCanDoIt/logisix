@@ -1,12 +1,13 @@
 package com.sparta.core.dto;
 
 import com.sparta.core.entity.Hub;
+import java.math.BigDecimal;
 
 public record HubResponse(
     String hubName,
     String address,
-    Long latitude,
-    Long longitude,
+    BigDecimal latitude,
+    BigDecimal longitude,
     Long hubManagerId
 ) {
 

@@ -2,14 +2,15 @@ package com.sparta.core.dto;
 
 import com.sparta.core.entity.Company;
 import com.sparta.core.entity.CompanyTypeEnum;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public record CompanyResponse(
     String companyName,
     String address,
     CompanyTypeEnum companyType,
-    Long latitude,
-    Long longitude,
+    BigDecimal latitude,
+    BigDecimal longitude,
     UUID hubId,
     Long companyManagerId
 ) {

@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,11 +26,11 @@ public class Hub extends Base {
   @Column(name = "hub_name", nullable = false, length = 100)
   private String hubName;
 
-  @Column(name = "latitude", nullable = false)
-  private Long latitude;
+  @Column(name = "latitude", nullable = false, scale = 8)
+  private BigDecimal latitude;
 
-  @Column(name = "longitude", nullable = false)
-  private Long longitude;
+  @Column(name = "longitude", nullable = false, scale = 8)
+  private BigDecimal longitude;
 
   @Column(name = "address", nullable = false, length = 100)
   private String address;

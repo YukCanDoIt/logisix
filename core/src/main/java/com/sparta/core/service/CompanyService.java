@@ -38,8 +38,8 @@ public class CompanyService {
       throw new ApiException(ErrorCode.DUPLICATE_VALUE);
     }
 
-    Coordinate coordinate = new Coordinate(companyRequest.longitude(),
-        companyRequest.latitude());
+    Coordinate coordinate = new Coordinate(companyRequest.longitude().doubleValue(),
+        companyRequest.latitude().doubleValue());
     Company company = new Company(companyRequest, geometryFactory.createPoint(coordinate));
     companyRepository.save(company);
   }
@@ -72,8 +72,8 @@ public class CompanyService {
 
     Company fetchedCompany = companyOptional.get();
 
-    Coordinate coordinate = new Coordinate(companyRequest.longitude(),
-        companyRequest.latitude());
+    Coordinate coordinate = new Coordinate(companyRequest.longitude().doubleValue(),
+        companyRequest.latitude().doubleValue());
     Company company = new Company(companyRequest, geometryFactory.createPoint(coordinate)
     );
 
