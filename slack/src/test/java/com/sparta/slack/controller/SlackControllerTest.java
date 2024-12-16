@@ -48,7 +48,7 @@ class SlackControllerTest {
         .thenReturn("Message sent successfully!");
 
     // When & Then
-    mockMvc.perform(post("/api/slack/send")
+    mockMvc.perform(post("/api/v1/slack/send")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk());
@@ -60,7 +60,7 @@ class SlackControllerTest {
     SlackRequest invalidRequest = new SlackRequest("", "", "", "", "", List.of(), null, "", "");
 
     // When & Then
-    mockMvc.perform(post("/api/slack/send")
+    mockMvc.perform(post("/api/v1/slack/send")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(invalidRequest)))
         .andExpect(status().isBadRequest());

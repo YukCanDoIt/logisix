@@ -55,7 +55,7 @@ class SlackControllerIntegrationTest {
     );
 
     // When & Then: 실제 컨트롤러 호출
-    mockMvc.perform(post("/api/slack/send")
+    mockMvc.perform(post("/api/v1/slack/send")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(slackRequest)))
         .andExpect(status().isOk());
@@ -67,7 +67,7 @@ class SlackControllerIntegrationTest {
     SlackRequest invalidRequest = new SlackRequest("", "", "", "", "", List.of(), null, "", "");
 
     // When & Then
-    mockMvc.perform(post("/api/slack/send")
+    mockMvc.perform(post("/api/v1/slack/send")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(invalidRequest)))
         .andExpect(status().isBadRequest());
@@ -92,7 +92,7 @@ class SlackControllerIntegrationTest {
     );
 
     // When & Then
-    mockMvc.perform(post("/api/slack/send")
+    mockMvc.perform(post("/api/v1/slack/send")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(slackRequest)))
         .andExpect(status().isInternalServerError());

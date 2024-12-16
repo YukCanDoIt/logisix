@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 @TestPropertySource(properties = {
     "eureka.client.enabled=false",
     "spring.cloud.discovery.enabled=false",
-    "slack.webhook.url=https://hooks.slack.com/services/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"
+    "slack.webhook.url=https://hooks.slack.com/services/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"
 })
 class SlackServiceTest {
 

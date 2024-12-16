@@ -1,14 +1,12 @@
 package com.sparta.order.service;
 
 import com.sparta.order.client.DeliveryClient;
-import com.sparta.order.client.UserClient;
 import com.sparta.order.domain.Order;
-import com.sparta.order.domain.OrderItem;
 import com.sparta.order.domain.OrderStatus;
 import com.sparta.order.dto.OrderItemRequest;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
-import com.sparta.order.exception.UnauthorizedException;
+import com.sparta.order.exception.LogisixException;
 import com.sparta.order.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,14 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -34,9 +27,6 @@ class OrderServiceTest {
 
   @Mock
   private DeliveryClient deliveryClient;
-
-  @Mock
-  private UserClient userClient; // FeignClient 사용
 
   @InjectMocks
   private OrderService orderService;
@@ -50,27 +40,28 @@ class OrderServiceTest {
   @DisplayName("주문 생성 성공 테스트")
   void createOrder_Success() {
     UUID deliveryId = UUID.randomUUID();
-    UUID userId = UUID.randomUUID();
-    OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 10, 500);
+    long userId = 12345L;
+    long supplierId = 100L;
+    long receiverId = 200L;
+    UUID hubId = UUID.randomUUID();
 
+    OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 10, 500);
     OrderRequest request = new OrderRequest(
-        userId, UUID.randomUUID(), UUID.randomUUID(),
+        supplierId, receiverId, hubId,
         List.of(itemRequest), LocalDateTime.now(), "Test Order", "Details"
     );
 
-    // FeignClient를 통해 사용자 역할 조회
-    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "MASTER"));
     when(deliveryClient.createDelivery(any(), eq(request))).thenReturn(deliveryId);
 
     Order order = Order.builder()
         .id(UUID.randomUUID())
-        .supplierId(request.supplierId())
+        .supplierId(supplierId)
         .status(OrderStatus.PENDING)
         .build();
 
     when(orderRepository.save(any(Order.class))).thenReturn(order);
 
-    OrderResponse response = orderService.createOrder(request, userId, "TOKEN");
+    OrderResponse response = orderService.createOrder(request, userId, "MASTER");
 
     assertNotNull(response);
     assertEquals(OrderStatus.PENDING, response.status());
@@ -80,35 +71,36 @@ class OrderServiceTest {
   @Test
   @DisplayName("주문 생성 실패 - 권한 오류")
   void createOrder_Fail_Unauthorized() {
-    UUID userId = UUID.randomUUID();
+    long userId = 12345L;
+    long supplierId = 100L;
+    long receiverId = 200L;
+    UUID hubId = UUID.randomUUID();
+
     OrderRequest request = new OrderRequest(
-        userId, UUID.randomUUID(), UUID.randomUUID(),
-        List.of(), LocalDateTime.now(), "Test Order", "Details"
+        supplierId, receiverId, hubId,
+        List.of(new OrderItemRequest(UUID.randomUUID(), 1, 100)),
+        LocalDateTime.now(), "Test Order", "Details"
     );
 
-    // FeignClient에서 역할이 MASTER가 아닌 경우
-    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "ANONYMOUS"));
-
-    assertThrows(UnauthorizedException.class,
-        () -> orderService.createOrder(request, userId, "TOKEN"));
+    assertThrows(LogisixException.class,
+        () -> orderService.createOrder(request, userId, "ANONYMOUS"));
   }
 
   @Test
   @DisplayName("사용자 주문 조회 성공 테스트")
   void getOrdersByUser_Success() {
-    UUID userId = UUID.randomUUID();
+    long userId = 12345L;
+    long supplierId = userId; // userId를 supplierId로 사용
     Order order = Order.builder()
         .id(UUID.randomUUID())
-        .supplierId(userId)
+        .supplierId(supplierId)
         .status(OrderStatus.PENDING)
         .orderItems(new ArrayList<>())
         .build();
 
-    // 역할 조회 및 주문 반환
-    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "COMPANY_MANAGER"));
     when(orderRepository.findAll()).thenReturn(List.of(order));
 
-    List<OrderResponse> responses = orderService.getOrdersByUser(userId, "TOKEN");
+    List<OrderResponse> responses = orderService.getOrdersByUser(userId, "COMPANY_MANAGER");
 
     assertEquals(1, responses.size());
     verify(orderRepository, times(1)).findAll();
@@ -118,24 +110,26 @@ class OrderServiceTest {
   @DisplayName("주문 수정 성공 테스트")
   void updateOrder_Success() {
     UUID orderId = UUID.randomUUID();
-    UUID userId = UUID.randomUUID();
+    long userId = 12345L;
+    long supplierId = userId;
+    long receiverId = 200L;
+    UUID hubId = UUID.randomUUID();
 
     Order order = Order.builder()
         .id(orderId)
-        .supplierId(userId)
+        .supplierId(supplierId)
         .orderItems(new ArrayList<>())
         .build();
 
     OrderItemRequest itemRequest = new OrderItemRequest(UUID.randomUUID(), 5, 300);
     OrderRequest request = new OrderRequest(
-        userId, UUID.randomUUID(), UUID.randomUUID(),
+        supplierId, receiverId, hubId,
         List.of(itemRequest), LocalDateTime.now(), "Updated Order", "Details"
     );
 
-    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "COMPANY_MANAGER"));
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    OrderResponse response = orderService.updateOrder(orderId, userId, request, "TOKEN");
+    OrderResponse response = orderService.updateOrder(orderId, userId, request, "COMPANY_MANAGER");
 
     assertEquals("Updated Order", response.orderNote());
     verify(orderRepository, times(1)).save(order);
@@ -145,18 +139,18 @@ class OrderServiceTest {
   @DisplayName("주문 삭제 성공 테스트")
   void deleteOrder_Success() {
     UUID orderId = UUID.randomUUID();
-    UUID userId = UUID.randomUUID();
+    long userId = 12345L;
+    long supplierId = userId;
 
     Order order = Order.builder()
         .id(orderId)
-        .supplierId(userId)
+        .supplierId(supplierId)
         .status(OrderStatus.PENDING)
         .build();
 
-    when(userClient.getUserRole(eq(userId), anyString())).thenReturn(Map.of("role", "MASTER"));
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-    orderService.deleteOrder(orderId, userId, "TOKEN");
+    orderService.deleteOrder(orderId, userId, "MASTER");
 
     assertTrue(order.isDeleted());
     verify(orderRepository, times(1)).save(order);
@@ -166,6 +160,7 @@ class OrderServiceTest {
   @DisplayName("주문 상태 변경 성공 테스트")
   void updateOrderStatus_Success() {
     UUID orderId = UUID.randomUUID();
+    long userId = 12345L; // userId 선언했지만 사용하지 않는다면 제거 가능
 
     Order order = Order.builder()
         .id(orderId)
@@ -173,9 +168,8 @@ class OrderServiceTest {
         .build();
 
     when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-    when(userClient.getUserRole(any(), anyString())).thenReturn(Map.of("role", "MASTER"));
 
-    OrderResponse response = orderService.updateOrderStatus(orderId, "CONFIRMED", "TOKEN");
+    OrderResponse response = orderService.updateOrderStatus(orderId, "CONFIRMED", "MASTER");
 
     assertEquals(OrderStatus.CONFIRMED, response.status());
     verify(orderRepository, times(1)).save(order);
