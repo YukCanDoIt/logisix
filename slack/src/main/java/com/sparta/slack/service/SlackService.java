@@ -2,6 +2,8 @@ package com.sparta.slack.service;
 
 import com.sparta.slack.domain.SlackMessage;
 import com.sparta.slack.dto.SlackRequest;
+import com.sparta.slack.exception.ErrorCode;
+import com.sparta.slack.exception.LogisixException;
 import com.sparta.slack.repository.SlackMessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,23 +31,23 @@ public class SlackService {
   public String sendMessage(SlackRequest request) {
     // 요청 검증
     if (request == null) {
-      throw new IllegalArgumentException("SlackRequest 객체가 null일 수 없습니다.");
+      throw new LogisixException(ErrorCode.INVALID_REQUEST_DATA);
     }
     if (request.orderItems() == null || request.orderItems().isEmpty()) {
-      throw new IllegalArgumentException("주문 항목이 비어 있습니다.");
+      throw new LogisixException(ErrorCode.INVALID_REQUEST_DATA);
     }
 
     // AI 서비스로부터 마감 시간 계산
     String calculatedDeadline = aiCalculationService.calculateDeadline(request);
     if (calculatedDeadline == null || calculatedDeadline.isBlank()) {
-      throw new IllegalArgumentException("AI 서비스에서 유효한 마감 시간을 반환하지 않았습니다.");
+      throw new LogisixException(ErrorCode.INVALID_REQUEST_DATA);
     }
 
     LocalDateTime deadline;
     try {
       deadline = LocalDateTime.parse(calculatedDeadline, DATE_FORMATTER);
     } catch (Exception e) {
-      throw new IllegalArgumentException("유효하지 않은 날짜 형식입니다: " + calculatedDeadline);
+      throw new LogisixException(ErrorCode.INVALID_REQUEST_DATA);
     }
 
     // 주문 아이템 정보 생성

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/slack")
+@RequestMapping("/api/v1/slack")
 @Tag(name = "Slack API", description = "Slack 메시지 전송 API")
 public class SlackController {
 
@@ -32,11 +32,12 @@ public class SlackController {
   @PostMapping("/send")
   public ResponseEntity<SlackResponse> sendSlackMessage(@RequestBody @Valid SlackRequest request) {
     try {
-      String response = slackService.sendMessage(request);
-      return ResponseEntity.ok(new SlackResponse(true, response, request.channel()));
+      String slackApiResponse = slackService.sendMessage(request);
+      // 정적 팩토리 메서드 사용
+      return ResponseEntity.ok(SlackResponse.from(request, true, slackApiResponse));
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(new SlackResponse(false, e.getMessage(), request.channel()));
+          .body(SlackResponse.from(request, false, e.getMessage()));
     }
   }
 }

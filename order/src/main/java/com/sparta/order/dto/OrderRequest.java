@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.UUID;
 
 public record OrderRequest(
-    UUID supplierId,
-    UUID receiverId,
+    long supplierId,
+    long receiverId,
     UUID hubId,
     List<OrderItemRequest> orderItems,
     LocalDateTime expectedDeliveryDate,

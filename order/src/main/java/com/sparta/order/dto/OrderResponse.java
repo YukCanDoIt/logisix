@@ -8,8 +8,8 @@ import java.util.UUID;
 
 public record OrderResponse(
     UUID orderId,
-    UUID supplierId,
-    UUID receiverId,
+    long supplierId,
+    long receiverId,
     UUID hubId,
     List<OrderItemResponse> orderItems,
     String orderNote,

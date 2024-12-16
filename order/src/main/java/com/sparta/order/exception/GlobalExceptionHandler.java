@@ -12,7 +12,6 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 
 @Slf4j
 @ControllerAdvice
@@ -26,6 +25,19 @@ public class GlobalExceptionHandler {
             .timestamp(LocalDateTime.now())
             .status(e.getHttpStatus().value())
             .error(e.getHttpStatus().getReasonPhrase())
+            .message(e.getMessage())
+            .path(request.getDescription(false).replace("uri=", ""))
+            .build());
+  }
+
+  @ExceptionHandler(UnauthorizedException.class)
+  public ResponseEntity<ExceptionResponse> handleUnauthorizedException(UnauthorizedException e, WebRequest request) {
+    log.error("[ERROR] {}", e.getMessage());
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body(ExceptionResponse.builder()
+            .timestamp(LocalDateTime.now())
+            .status(HttpStatus.FORBIDDEN.value())
+            .error(HttpStatus.FORBIDDEN.getReasonPhrase())
             .message(e.getMessage())
             .path(request.getDescription(false).replace("uri=", ""))
             .build());
