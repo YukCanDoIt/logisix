@@ -94,9 +94,9 @@ public class UserService {
 
         BooleanExpression condition = qUser.userId.eq(userId).and(isNotDeleted(qUser));
 
-        if (!Role.MASTER.name().equals(requesterRole) && !userId.equals(requesterId)) {
-            throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
-        }
+//        if (!Role.MASTER.name().equals(requesterRole) && !userId.equals(requesterId)) {
+//            throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS);
+//        }
 
         User user = queryFactory
                 .selectFrom(qUser)
