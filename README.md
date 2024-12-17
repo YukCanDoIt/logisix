@@ -48,7 +48,7 @@
 </td>
 <td style="text-align: center;">
 <a href="https://github.com/HanBeom98">
-<img src="" width="100px;" alt="프로필이미지"/>
+<img src="docs/hanbeom.png" width="100px;" alt="프로필이미지"/>
 <br />
 <sub><b>조한범</b></sub>
 <br />
