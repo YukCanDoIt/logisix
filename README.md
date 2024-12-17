@@ -30,7 +30,7 @@
 </td>
 <td style="text-align: center;">
 <a href="https://github.com/sooooooongyi">
-<img src="" width="100px;" alt="프로필이미지"/>
+<img src="https://github.com/user-attachments/assets/9616c0e9-8efd-40ef-82eb-a5bfe959b9d9" width="100px;" alt="프로필이미지"/>
 <br />
 <sub><b>박송이</b></sub>
 <br />
