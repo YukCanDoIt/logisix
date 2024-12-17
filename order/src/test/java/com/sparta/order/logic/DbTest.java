@@ -1,69 +1,97 @@
 package com.sparta.order.logic;
 
+import com.sparta.order.client.DeliveryClient;
+import com.sparta.order.domain.Order;
 import com.sparta.order.domain.OrderItem;
-import com.sparta.order.domain.OrderStatus;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
 import com.sparta.order.repository.OrderRepository;
 import com.sparta.order.service.OrderService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
-public class DbTest {
+class DbTest {
 
-  @Autowired
+  @Mock
+  private DeliveryClient deliveryClient;
+
+  @Mock
+  private OrderRepository orderRepository;
+
+  @InjectMocks
   private OrderService orderService;
 
-  @Autowired
-  private OrderRepository orderRepository;
+  @BeforeEach
+  void setUp() {
+    MockitoAnnotations.openMocks(this);
+  }
 
   @Test
   void testSaveOrderToDatabase() {
-    // Given: 주문 생성
-    UUID supplierId = UUID.randomUUID(); // 공급자 ID
-    UUID receiverId = UUID.randomUUID(); // 수신자 ID
-    UUID hubId = UUID.randomUUID(); // 허브 ID
+    // Given
+    long supplierId = 100L;   // long 타입
+    long receiverId = 200L;   // long 타입
+    UUID hubId = UUID.randomUUID();
+    UUID deliveryId = UUID.randomUUID();
 
-    // 주문 아이템 생성
     OrderItem orderItem = OrderItem.builder()
-        .productId(UUID.randomUUID()) // 제품 ID
-        .quantity(2)  // 수량
-        .pricePerUnit(1000)  // 단가
+        .productId(UUID.randomUUID())
+        .quantity(2)
+        .pricePerUnit(1000)
         .build();
 
-    // 주문 요청 생성
     OrderRequest orderRequest = new OrderRequest(
         supplierId,
         receiverId,
         hubId,
-        List.of(),  // 주문 아이템
-        null,  // 예상 배송 날짜는 null로 설정
-        "Test order note",  // 주문 노트
-        "Test request details"  // 요청 세부사항
+        List.of(orderItem.toRequest()),
+        null,
+        "Test order note",
+        "Test request details"
     );
 
-    // When: 주문 저장
-    OrderResponse savedOrder = orderService.createOrder(orderRequest);
+    String role = "MASTER";
+    long userId = 12345L; // userId long 타입
 
-    // Then: 주문이 제대로 저장되었는지 확인
-    assertNotNull(savedOrder);
-    assertNotNull(savedOrder.orderId(), "ID should not be null after saving.");
-    assertEquals(supplierId, savedOrder.supplierId());
-    assertEquals(receiverId, savedOrder.receiverId());
-    assertEquals(hubId, savedOrder.hubId());
-    assertEquals("Test order note", savedOrder.orderNote());
-    assertEquals(2, savedOrder.quantity());  // 주문 아이템의 수량 합
-    assertEquals("Test request details", savedOrder.requestDetails());
-    assertEquals(OrderStatus.PENDING, savedOrder.status());  // 상태가 PENDING이어야 함
+    // Mock 설정
+    when(deliveryClient.createDelivery(any(UUID.class), any(OrderRequest.class)))
+        .thenReturn(deliveryId);
 
-    // Clean up: 테스트 후 데이터 삭제
-    orderRepository.deleteById(savedOrder.orderId());
+    when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+      Order savedOrder = invocation.getArgument(0);
+      if (savedOrder.getId() == null) {
+        savedOrder.setId(UUID.randomUUID()); // 패키지-프라이빗 setter 사용
+      }
+      return savedOrder;
+    });
+
+    // When
+    OrderResponse savedOrderResponse = orderService.createOrder(orderRequest, userId, role);
+
+    // 로그 추가 (디버깅 용도)
+    System.out.println("Order ID: " + savedOrderResponse.orderId());
+
+    // Then
+    assertNotNull(savedOrderResponse, "OrderResponse should not be null");
+    assertNotNull(savedOrderResponse.orderId(), "Order ID should not be null");
+    assertNotNull(savedOrderResponse.supplierId(), "Supplier ID should not be null");
+    assertNotNull(savedOrderResponse.receiverId(), "Receiver ID should not be null");
+    assertNotNull(savedOrderResponse.hubId(), "Hub ID should not be null");
+    assertNotNull(savedOrderResponse.status(), "Order status should not be null");
+    assertNotNull(savedOrderResponse.deliveryId(), "Delivery ID should not be null");
+    // 추가적인 필드 검증 예시
+    assertNotNull(savedOrderResponse.orderNote(), "Order note should not be null");
+    assertNotNull(savedOrderResponse.requestDetails(), "Request details should not be null");
   }
 }

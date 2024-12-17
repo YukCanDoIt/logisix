@@ -1,9 +1,7 @@
 package com.sparta.slack.dto;
 
-import com.sparta.order.dto.OrderItemRequest;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-
 import java.time.LocalDateTime;
 import java.util.List;
 

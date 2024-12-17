@@ -28,6 +28,11 @@ public abstract class BaseEntity {
   @Column(name = "updated_at")
   private LocalDateTime updatedAt;
 
+  // 명시적으로 isDeleted 메서드 추가
+  public boolean isDeleted() {
+    return this.isDeleted;
+  }
+
   public void markAsDeleted() {
     this.isDeleted = true;
     this.updatedAt = LocalDateTime.now();

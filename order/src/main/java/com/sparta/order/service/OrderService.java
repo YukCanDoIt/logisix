@@ -1,15 +1,16 @@
 package com.sparta.order.service;
 
 import com.sparta.order.client.DeliveryClient;
+import com.sparta.order.client.UserClient;
 import com.sparta.order.domain.Order;
 import com.sparta.order.domain.OrderItem;
 import com.sparta.order.domain.OrderStatus;
 import com.sparta.order.dto.OrderItemResponse;
 import com.sparta.order.dto.OrderRequest;
 import com.sparta.order.dto.OrderResponse;
-import com.sparta.order.exception.UnauthorizedException;
+import com.sparta.order.exception.ErrorCode;
+import com.sparta.order.exception.LogisixException; // 글로벌 예외 처리용 예외
 import com.sparta.order.repository.OrderRepository;
-import com.sparta.user.entity.Role;  // Role Enum을 import
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,34 +24,24 @@ public class OrderService {
 
   private final OrderRepository orderRepository;
   private final DeliveryClient deliveryClient;
+  private final UserClient userClient;
 
-  public OrderService(OrderRepository orderRepository, DeliveryClient deliveryClient) {
+  public OrderService(OrderRepository orderRepository, DeliveryClient deliveryClient, UserClient userClient) {
     this.orderRepository = orderRepository;
     this.deliveryClient = deliveryClient;
+    this.userClient = userClient;
   }
 
   // 주문 생성
   @Transactional
-  public OrderResponse createOrder(OrderRequest orderRequest) {
+  public OrderResponse createOrder(OrderRequest orderRequest, long userId, String role) {
     validateOrderRequest(orderRequest);
 
-    Order order = Order.builder()
-        .supplierId(orderRequest.supplierId())
-        .receiverId(orderRequest.receiverId())
-        .hubId(orderRequest.hubId())
-        .orderItems(orderRequest.orderItems().stream()
-            .map(item -> OrderItem.builder()
-                .productId(item.productId())
-                .quantity(item.quantity())  // 여기서 quantity를 사용
-                .pricePerUnit(item.pricePerUnit())
-                .build())
-            .collect(Collectors.toList()))
-        .expectedDeliveryDate(orderRequest.expectedDeliveryDate())
-        .orderNote(orderRequest.orderNote())
-        .status(OrderStatus.PENDING)
-        .createdAt(LocalDateTime.now())
-        .build();
+    if (!"MASTER".equals(role)) {
+      throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS); // 권한 없음
+    }
 
+    Order order = Order.create(orderRequest);
     orderRepository.save(order);
 
     UUID deliveryId = deliveryClient.createDelivery(order.getId(), orderRequest);
@@ -61,32 +52,39 @@ public class OrderService {
     return mapToOrderResponse(order);
   }
 
+  // 주문 삭제
+  @Transactional
+  public void deleteOrder(UUID id, long userId, String role) {
+    Order order = orderRepository.findById(id)
+        .filter(o -> !o.isDeleted())
+        .orElseThrow(() -> new LogisixException(ErrorCode.INVALID_REQUEST_DATA)); // 주문 없음
+
+    if (!"MASTER".equals(role)) {
+      throw new LogisixException(ErrorCode.FORBIDDEN_ACCESS); // 삭제 권한 없음
+    }
+
+    order.markAsDeleted();
+    orderRepository.save(order);
+  }
+
   // 사용자별 주문 조회
   @Transactional(readOnly = true)
-  public List<OrderResponse> getOrdersByUser(UUID userId, String role) {
-    Role userRole = parseRole(role);  // Role Enum으로 변환
-
+  public List<OrderResponse> getOrdersByUser(long userId, String role) {
     return orderRepository.findAll().stream()
-        .filter(order -> isAccessible(userId, userRole, order) && !order.isDelete())
+        .filter(order -> isAccessible(userId, role, order) && !order.isDeleted())
         .map(this::mapToOrderResponse)
         .collect(Collectors.toList());
   }
 
   // 주문 수정
   @Transactional
-  public OrderResponse updateOrder(UUID id, UUID userId, OrderRequest orderRequest, String role) {
-    Role userRole = parseRole(role);  // Role Enum으로 변환
-
+  public OrderResponse updateOrder(UUID id, long userId, OrderRequest orderRequest, String role) {
     Order order = orderRepository.findById(id)
-        .filter(o -> isAccessible(userId, userRole, o) && !o.isDelete())
-        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+        .filter(o -> isAccessible(userId, role, o) && !o.isDeleted())
+        .orElseThrow(() -> new LogisixException(ErrorCode.INVALID_REQUEST_DATA)); // 주문 없음 또는 접근 불가
 
     List<OrderItem> updatedItems = orderRequest.orderItems().stream()
-        .map(item -> OrderItem.builder()
-            .productId(item.productId())
-            .quantity(item.quantity())  // quantity를 사용
-            .pricePerUnit(item.pricePerUnit())
-            .build())
+        .map(item -> new OrderItem(item.productId(), item.quantity(), item.pricePerUnit()))
         .collect(Collectors.toList());
 
     order.updateOrder(updatedItems, orderRequest.orderNote(), orderRequest.expectedDeliveryDate());
@@ -96,36 +94,18 @@ public class OrderService {
     return mapToOrderResponse(order);
   }
 
-  // 주문 삭제 (논리 삭제)
-  @Transactional
-  public void deleteOrder(UUID id, UUID userId, String role) {
-    Role userRole = parseRole(role);  // Role Enum으로 변환
-
-    Order order = orderRepository.findById(id)
-        .filter(o -> !o.isDelete())
-        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
-
-    if (!isAccessible(userId, userRole, order)) {
-      throw new UnauthorizedException("삭제 권한이 없습니다.");
-    }
-
-    order.markAsDeleted();
-    orderRepository.save(order);
-  }
-
   // 주문 상태 변경
   @Transactional
-  public OrderResponse updateOrderStatus(UUID id, String newStatus) {
+  public OrderResponse updateOrderStatus(UUID id, String newStatus, String role) {
+    // UUID 타입으로 변경
     Order order = orderRepository.findById(id)
-        .filter(o -> !o.isDelete())
-        .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+        .orElseThrow(() -> new LogisixException(ErrorCode.INVALID_REQUEST_DATA)); // 주문 없음
 
-    if (order.getIsDeliveryStarted()) {
-      throw new IllegalStateException("배송이 시작된 후에는 상태를 변경할 수 없습니다.");
+    if (order.getStatus() == OrderStatus.CONFIRMED) {
+      throw new LogisixException(ErrorCode.INVALID_REQUEST_DATA); // 배송 시작 후 변경 불가
     }
 
-    OrderStatus status = OrderStatus.valueOf(newStatus.toUpperCase());
-    order.setStatus(status);
+    order.setStatus(OrderStatus.valueOf(newStatus.toUpperCase()));
     order.setUpdatedAt(LocalDateTime.now());
     orderRepository.save(order);
 
@@ -134,31 +114,25 @@ public class OrderService {
 
   // 필수 필드 검증
   private void validateOrderRequest(OrderRequest orderRequest) {
-    if (orderRequest.supplierId() == null || orderRequest.receiverId() == null
-        || orderRequest.hubId() == null || orderRequest.orderItems().isEmpty()) {
-      throw new IllegalArgumentException("필수 필드가 누락되었습니다.");
+    if (orderRequest.hubId() == null
+        || orderRequest.orderItems() == null
+        || orderRequest.orderItems().isEmpty()) {
+      throw new LogisixException(ErrorCode.INVALID_REQUEST_DATA); // 필수 필드 누락
     }
   }
 
-  // 권한 검증
-  private boolean isAccessible(UUID userId, Role role, Order order) {
-    if (role == Role.MASTER) {
-      return true;
-    } else if (role == Role.HUB_MANAGER) {
-      return order.getHubId().equals(userId); // 담당 허브 관리자의 권한 체크
-    } else if (role == Role.DELIVERER || role == Role.COMPANY_MANAGER) {
-      return order.getSupplierId().equals(userId); // 배송 담당자 또는 업체 담당자의 권한 체크
-    }
-    return false;
-  }
-
-  // Role Enum 값으로 변환하는 메서드
-  private Role parseRole(String role) {
-    try {
-      return Role.valueOf(role);  // Role Enum으로 변환
-    } catch (IllegalArgumentException e) {
-      throw new RuntimeException("잘못된 권한 값입니다.");  // 예외 처리
-    }
+  // 접근 권한 검증
+  private boolean isAccessible(long userId, String role, Order order) {
+    return switch (role) {
+      case "MASTER" -> true;
+      case "HUB_MANAGER" -> {
+        // hubId는 UUID, userId는 long이므로 직접 비교 불가능
+        // TODO: 기획서 기반으로 userId -> hubId 매핑 로직 구현 필요
+        yield false;
+      }
+      case "DELIVERER", "COMPANY_MANAGER" -> order.getSupplierId() == userId;
+      default -> false;
+    };
   }
 
   // Order -> OrderResponse 매핑
@@ -173,10 +147,10 @@ public class OrderService {
         order.getReceiverId(),
         order.getHubId(),
         orderItemResponses,
-        order.getOrderNote(), // orderNote 추가
+        order.getOrderNote(),
         order.getStatus(),
-        order.getDeliveryId(), // deliveryId 추가
-        order.getRequestDetails() // requestDetails 추가
+        order.getDeliveryId(),
+        order.getRequestDetails()
     );
   }
 }
