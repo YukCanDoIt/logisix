@@ -23,3 +23,8 @@
 - Zipkin: 분산 추적을 통해 서비스 간 호출 흐름을 시각화
 
 ![스크린샷 2024-12-17 오후 4 36 46](https://github.com/user-attachments/assets/7a95115b-ab2e-4ad9-a800-32ef3693a0ec)
+
+## 설정
+1. Docker Desktop 설치
+2. logisix 최상위 루트에서 `docker-compose up -d` 입력
+3. 컨테이너 생성 후 `http://gateway:19091/api/v1/core/` 경로로 API 호출
