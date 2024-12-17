@@ -85,6 +85,129 @@
 
 <img src="docs/erd-image.png" alt="ERD"/>
 
+## 프로젝트 구조
+
+```
+
+├── core
+│   ├── Dockerfile
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── com
+│           │       └── sparta
+│           │           └── core
+│           │               ├── CoreApplication.java
+│           │               ├── config
+│           │               ├── controller
+│           │               ├── dto
+│           │               ├── entity
+│           │               ├── exception
+│           │               ├── filter
+│           │               ├── repository
+│           │               ├── response
+│           │               └── service
+│           └── resources
+├── delivery
+│   ├── Dockerfile
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── com
+│           │       └── sparta
+│           │           └── delivery
+│           │               ├── DeliveryApplication.java
+│           │               ├── common
+│           │               ├── config
+│           │               ├── controller
+│           │               ├── dto
+│           │               ├── entity
+│           │               ├── repository
+│           │               ├── service
+│           │               └── util
+│           └── resources
+├── docker-compose.yml
+├── docs
+├── gateway
+│   ├── Dockerfile
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── com
+│           │       └── sparta
+│           │           └── gateway
+│           │               └── filter
+│           └── resources
+│               └── application.yml
+├── order
+│   ├── Dockerfile
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── com
+│           │       └── sparta
+│           │           └── order
+│           │               ├── OrderApplication.java
+│           │               ├── client
+│           │               ├── config
+│           │               ├── controller
+│           │               ├── domain
+│           │               ├── dto
+│           │               ├── exception
+│           │               ├── repository
+│           │               └── service
+│           └── resources
+├── server
+│   ├── Dockerfile
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── com
+│           │       └── sparta
+│           │           └── server
+│           │               └── ServerApplication.java
+│           └── resources
+├── slack
+    ├── Dockerfile
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── com
+│           │       └── sparta
+│           │           └── slack
+│           │               ├── SlackApplication.java
+│           │               ├── config
+│           │               ├── controller
+│           │               ├── domain
+│           │               ├── dto
+│           │               ├── repository
+│           │               └── service
+│           └── resources
+└── user
+    ├── Dockerfile
+    └── src
+        └── main
+            ├── java
+            │   └── com
+            │       └── sparta
+            │           └── user
+            │               ├── UserApplication.java
+            │               ├── config
+            │               ├── controller
+            │               ├── domain
+            │               ├── dto
+            │               │   ├── request
+            │               │   └── response
+            │               ├── exception
+            │               ├── filter
+            │               ├── repository
+            │               ├── service
+            │               └── util
+            └── resources
+```
+
+
+
 ## 실행 방법
 1. Docker Desktop 설치
 2. logisix 최상위 루트에서 `docker-compose up -d` 입력
