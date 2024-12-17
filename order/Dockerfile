@@ -22,7 +22,7 @@ FROM ubuntu:20.04
 RUN apt-get update && apt-get install -y openjdk-17-jre-headless && rm -rf /var/lib/apt/lists/*
 
 # JAR 파일을 app 내 복사
-COPY --from=build /app/build/libs/order-0.0.1-SNAPSHOT.jar /order-service.jar
+COPY --from=build /app/build/libs/order.jar /order-service.jar
 
 # 애플리케이션 사용 포트번호
 EXPOSE 19094

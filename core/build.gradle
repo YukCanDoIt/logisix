@@ -26,15 +26,6 @@ repositories {
 ext {
     set('springCloudVersion', "2024.0.0")
 }
-
-bootJar {
-    enabled = true
-}
-
-jar {
-    enabled = false
-}
-
 dependencies {
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
@@ -62,4 +53,12 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+bootJar {
+    enabled = true
+    archiveFileName = 'core.jar'
+}
+jar {
+    enabled = false
 }

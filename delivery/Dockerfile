@@ -1,25 +1,31 @@
-# Gradle 빌드 단계
-FROM eclipse-temurin:17-jdk AS build
+# 애플리케이션 빌드
+FROM gradle:7.3.3-jdk17 AS build
 WORKDIR /app
 
-# Gradle Wrapper 및 프로젝트 파일 복사
-COPY gradlew /app/
-COPY gradle /app/gradle
-COPY build.gradle settings.gradle /app/
+# gradle 설정 파일, gradlew 스크립트, 그리고 wrapper 파일들 복사
+COPY build.gradle settings.gradle gradlew /app/
+COPY gradle/wrapper /app/gradle/wrapper
+
+# gradlew 실행 권한 부여
+RUN chmod +x ./gradlew
+
+# 소스 코드 복사
 COPY src /app/src
 
-# 실행 권한 부여 및 애플리케이션 빌드
-RUN chmod +x /app/gradlew && ./gradlew build -x test --info
+# 테스트를 제외하고 애플리케이션 빌드
+RUN ./gradlew clean build -x test
 
-# 경량화된 실행 환경
-FROM eclipse-temurin:17-jre
-WORKDIR /app
+# 우분투 기반 실행환경 구성
+FROM ubuntu:20.04
 
-# 빌드된 JAR 파일 복사
-COPY --from=build /app/build/libs/delivery-0.0.1-SNAPSHOT.jar app.jar
+# JRE 설치
+RUN apt-get update && apt-get install -y openjdk-17-jre-headless && rm -rf /var/lib/apt/lists/*
 
-# 컨테이너 포트 노출
+# JAR 파일을 app 내 복사
+COPY --from=build /app/build/libs/delivery.jar /delivery-service.jar
+
+# 애플리케이션 사용 포트번호
 EXPOSE 19097
 
 # 애플리케이션 실행
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/delivery-service.jar"]

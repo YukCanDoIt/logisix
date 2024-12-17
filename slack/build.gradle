@@ -54,3 +54,12 @@ dependencyManagement {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+
+bootJar {
+	enabled = true
+	archiveFileName = 'slack.jar'
+}
+jar {
+	enabled = false
+}

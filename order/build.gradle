@@ -63,10 +63,11 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+
 bootJar {
 	enabled = true
+	archiveFileName = 'order.jar'
 }
-
 jar {
 	enabled = false
 }

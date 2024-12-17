@@ -48,7 +48,7 @@ public class HubController {
       @RequestParam Integer page
   ) {
     Page<HubResponse> hubResponseDtoList = hubService.getHubs(size, keyword, direction,
-        page - 1);
+        sortBy, page - 1);
     return ResponseEntity.ok(ApiResponse.success(hubResponseDtoList));
   }
 
