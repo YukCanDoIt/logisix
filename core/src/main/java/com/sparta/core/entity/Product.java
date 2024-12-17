@@ -34,6 +34,7 @@ public class Product extends Base {
     this.productName = productRequest.productName();
     this.companyId = productRequest.companyId();
     this.quantity = productRequest.quantity();
+    this.createBase("tempUser");
   }
 
   public void update(Product product) {

@@ -3,7 +3,7 @@ package com.sparta.core.service;
 import com.sparta.core.dto.ProductRequest;
 import com.sparta.core.dto.ProductResponse;
 import com.sparta.core.entity.Product;
-import com.sparta.core.exception.ApiException;
+import com.sparta.core.exception.LogisixException;
 import com.sparta.core.exception.ErrorCode;
 import com.sparta.core.repository.ProductRepository;
 import java.util.Optional;
@@ -27,7 +27,7 @@ public class ProductService {
         productRepository.findByProductName(productRequest.productName()));
 
     if (productOptional.isPresent()) {
-      throw new ApiException(ErrorCode.DUPLICATE_VALUE);
+      throw new LogisixException(ErrorCode.DUPLICATE_VALUE);
     }
 
     Product product = new Product(productRequest);
@@ -38,7 +38,7 @@ public class ProductService {
     Optional<Product> productOptional = productRepository.findById(productId);
 
     if (productOptional.isEmpty()) {
-      throw new IllegalArgumentException("Product not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Product product = productOptional.get();
@@ -57,7 +57,7 @@ public class ProductService {
     Optional<Product> productOptional = productRepository.findById(productId);
 
     if (productOptional.isEmpty()) {
-      throw new IllegalArgumentException("Product not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
 
     Product fetchedProduct = productOptional.get();
@@ -71,7 +71,7 @@ public class ProductService {
     Optional<Product> productOptional = productRepository.findById(productId);
 
     if (productOptional.isEmpty()) {
-      throw new IllegalArgumentException("Product not found");
+      throw new LogisixException(ErrorCode.VALUE_NOT_FOUND);
     }
   }
 }

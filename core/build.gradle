@@ -27,7 +27,17 @@ ext {
     set('springCloudVersion', "2024.0.0")
 }
 
+bootJar {
+    enabled = true
+}
+
+jar {
+    enabled = false
+}
+
 dependencies {
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     implementation 'org.hibernate.orm:hibernate-spatial:6.4.4.Final'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'

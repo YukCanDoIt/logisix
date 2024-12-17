@@ -1,6 +1,8 @@
 package com.sparta.core.service;
 
 import com.sparta.core.dto.KakaoMapResponse;
+import com.sparta.core.exception.ErrorCode;
+import com.sparta.core.exception.LogisixException;
 import java.math.BigDecimal;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +50,7 @@ public class KakaoMapService {
       );
 
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw new LogisixException(ErrorCode.API_CALL_FAILED);
     }
   }
 
